@@ -56,7 +56,12 @@ app.use(cors({
             return callback(null, true);
         }
 
-        // Allow same origin (production)
+        // Allow specific client URL in production (e.g. Vercel)
+        if (process.env.CLIENT_URL && origin === process.env.CLIENT_URL) {
+            return callback(null, true);
+        }
+
+        // Allow same origin (if backend serves frontend)
         if (process.env.NODE_ENV === 'production') {
             return callback(null, true);
         }
