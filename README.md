@@ -100,13 +100,6 @@ Frontend will run on `http://localhost:5173`
 
 ## Default Credentials
 
-### Admin
-- **Roll Number:** `ADMIN001`
-- **Password:** `admin123`
-
-### Sample Students
-- **Roll Number:** `2024001` / **Password:** `student123`
-- **Roll Number:** `2024002` / **Password:** `student123`
 
 *Note: Students must change their password on first login*
 
