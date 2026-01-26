@@ -632,13 +632,15 @@ const ProblemPage = () => {
                                                 <AnimatePresence>
                                                     {isOpen && (
                                                         <motion.div
-                                                            initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                                                            transition={{ duration: 0.2, ease: "easeOut" }}
-                                                            className="absolute top-full left-0 mt-2 w-48 bg-[#1e1e1e]/90 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden z-50 p-1.5"
+                                                            initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                            exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                                                            transition={{ duration: 0.1 }}
+                                                            className="absolute top-full left-0 mt-1 w-40 rounded-md shadow-2xl overflow-hidden z-[100]"
+                                                            className="absolute top-full left-0 mt-1 w-40 !bg-[#1e1e1e] border border-[#333] rounded-md shadow-2xl overflow-hidden z-[9999]"
+                                                            style={{ borderColor: '#333', borderWidth: '1px', borderStyle: 'solid' }}
                                                         >
-                                                            <div className="flex flex-col gap-0.5">
+                                                            <div className="py-1">
                                                                 {languages.map((lang) => (
                                                                     <button
                                                                         key={lang.id}
@@ -646,18 +648,21 @@ const ProblemPage = () => {
                                                                             handleLanguageChange(lang.id);
                                                                             setIsOpen(false);
                                                                         }}
-                                                                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 group relative ${language === lang.id
-                                                                            ? 'bg-emerald-500/10 text-emerald-400'
-                                                                            : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
-                                                                            }`}
+                                                                        className="w-full text-left flex items-center gap-3 px-3 py-2 text-xs font-medium transition-colors !text-white"
+                                                                        style={{
+                                                                            backgroundColor: language === lang.id ? '#094771' : 'transparent',
+                                                                        }}
+                                                                        onMouseEnter={(e) => {
+                                                                            if (language !== lang.id) e.currentTarget.style.backgroundColor = '#2a2d2e';
+                                                                        }}
+                                                                        onMouseLeave={(e) => {
+                                                                            if (language !== lang.id) e.currentTarget.style.backgroundColor = 'transparent';
+                                                                        }}
                                                                     >
-                                                                        <span className="text-sm">{lang.icon}</span>
+                                                                        <span className="shrink-0 w-4 text-center">{lang.icon}</span>
                                                                         {lang.label}
                                                                         {language === lang.id && (
-                                                                            <motion.div
-                                                                                layoutId="active-lang"
-                                                                                className="absolute right-3 w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
-                                                                            />
+                                                                            <span className="ml-auto text-white">✓</span>
                                                                         )}
                                                                     </button>
                                                                 ))}
