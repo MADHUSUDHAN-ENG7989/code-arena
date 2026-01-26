@@ -16,6 +16,7 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
+    "@lottiefiles/dotlottie-react": "^0.17.13",
     "@monaco-editor/react": "^4.7.0",
     "@tailwindcss/postcss": "^4.1.18",
     "axios": "^1.13.2",

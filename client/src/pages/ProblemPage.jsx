@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiChevronDown } from 'react-icons/fi';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 // import confetti from 'canvas-confetti';
 // import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { questionsAPI, submissionsAPI } from '../lib/api';
@@ -39,6 +40,7 @@ const ProblemPage = () => {
     const [analyzing, setAnalyzing] = useState(false);
     const [liveTestResults, setLiveTestResults] = useState([]); // Real-time results
     const [lastSubmission, setLastSubmission] = useState(null);
+    const [showSuccessAnimations, setShowSuccessAnimations] = useState(false);
 
     // Language Dropdown State
     const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
@@ -264,6 +266,8 @@ const ProblemPage = () => {
             // Play Sound based on final result
             if (response.data.result.passed === response.data.result.total) {
                 playSubmittedSound();
+                setShowSuccessAnimations(true);
+                setTimeout(() => setShowSuccessAnimations(false), 5000); // Auto-hide after 5s
             } else {
                 playFailSound();
             }
@@ -876,6 +880,28 @@ const ProblemPage = () => {
                 </div>
             </div>
             {/* Status bar removed as buttons are now in top toolbar */}
+
+            {/* Success Animations Overlay */}
+            <AnimatePresence>
+                {showSuccessAnimations && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center"
+                    >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <DotLottieReact
+                                src="https://lottie.host/42e68507-20ff-4129-a6a0-2ecdb6063f6f/2j7dJ5fxuz.lottie"
+                                loop={false}
+                                autoplay
+                                style={{ width: '100%', height: '100%' }}
+                            />
+                        </div>
+
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div >
     );
 };
