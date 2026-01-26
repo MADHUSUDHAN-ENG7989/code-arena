@@ -42,6 +42,10 @@ const ProblemPage = () => {
     const [lastSubmission, setLastSubmission] = useState(null);
     const [showSuccessAnimations, setShowSuccessAnimations] = useState(false);
 
+    // Refs for instant feedback logic
+    const submittingRef = useRef(false);
+    const hasFailedRef = useRef(false);
+
     // Language Dropdown State
     const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
     const langDropdownRef = useRef(null);
@@ -79,9 +83,21 @@ const ProblemPage = () => {
 
         const handleProgress = (data) => {
             // Play ding if this specific case passed
-            // Execute side effect OUTSIDE of the state updater
             if (data.status === 'Passed' || (data.result && data.result.isCorrect)) {
                 playDingSound();
+            } else if (data.status === 'Failed' || (data.result && !data.result.isCorrect)) {
+                // If any case fails, mark as failed
+                hasFailedRef.current = true;
+            }
+
+            // check for instant success trigger (only if submitting, not running)
+            if (submittingRef.current && !hasFailedRef.current) {
+                // If this is the last test case and it Passed
+                if (data.caseId === data.total - 1 && data.status === 'Passed') {
+                    playSubmittedSound();
+                    setShowSuccessAnimations(true);
+                    setTimeout(() => setShowSuccessAnimations(false), 5000);
+                }
             }
 
             // data: { caseId, total, status, result }
@@ -221,6 +237,7 @@ const ProblemPage = () => {
 
     const handleRunCode = async () => {
         setRunning(true);
+        submittingRef.current = false; // logic separation for socket
         setTestResults(null);
         setLiveTestResults(Array(question.examples.length).fill({ status: 'Pending' })); // Init grid
         setActiveTab('results'); // Switch to results tab
@@ -252,6 +269,9 @@ const ProblemPage = () => {
 
     const handleSubmit = async () => {
         setSubmitting(true);
+        submittingRef.current = true; // Enable socket trigger
+        hasFailedRef.current = false; // Reset fail tracker
+
         setTestResults(null);
         setActiveTab('results');
 
@@ -263,11 +283,14 @@ const ProblemPage = () => {
             });
             setTestResults(response.data.result);
 
-            // Play Sound based on final result
+            // Play Sound based on final result (Fallback if socket didn't trigger, or redundantly safe)
             if (response.data.result.passed === response.data.result.total) {
-                playSubmittedSound();
-                setShowSuccessAnimations(true);
-                setTimeout(() => setShowSuccessAnimations(false), 5000); // Auto-hide after 5s
+                // If animation isn't already showing (e.g. from socket), trigger it
+                if (!showSuccessAnimations) {
+                    playSubmittedSound();
+                    setShowSuccessAnimations(true);
+                    setTimeout(() => setShowSuccessAnimations(false), 5000); // Auto-hide after 5s
+                }
             } else {
                 playFailSound();
             }
@@ -298,6 +321,7 @@ const ProblemPage = () => {
             setTestResults({ error: 'Submission Failed: Server error.' });
         } finally {
             setSubmitting(false);
+            submittingRef.current = false;
         }
     };
 
@@ -888,7 +912,6 @@ const ProblemPage = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.1 }}
                         className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center"
                         onLayoutAnimationComplete={() => console.log("Animation overlay visible")}
                     >
@@ -897,7 +920,6 @@ const ProblemPage = () => {
                                 src="https://lottie.host/42e68507-20ff-4129-a6a0-2ecdb6063f6f/2j7dJ5fxuz.lottie"
                                 loop={false}
                                 autoplay
-                                speed={2}
                                 style={{ width: '100%', height: '100%' }}
                             />
                         </div>
