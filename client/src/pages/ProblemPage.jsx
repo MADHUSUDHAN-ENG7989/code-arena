@@ -888,6 +888,7 @@ const ProblemPage = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        transition={{ duration: 0.1 }}
                         className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center"
                         onLayoutAnimationComplete={() => console.log("Animation overlay visible")}
                     >
@@ -896,6 +897,7 @@ const ProblemPage = () => {
                                 src="https://lottie.host/42e68507-20ff-4129-a6a0-2ecdb6063f6f/2j7dJ5fxuz.lottie"
                                 loop={false}
                                 autoplay
+                                speed={2}
                                 style={{ width: '100%', height: '100%' }}
                             />
                         </div>
