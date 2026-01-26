@@ -888,7 +888,8 @@ const ProblemPage = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center"
+                        className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center"
+                        onLayoutAnimationComplete={() => console.log("Animation overlay visible")}
                     >
                         <div className="absolute inset-0 flex items-center justify-center">
                             <DotLottieReact
@@ -898,7 +899,6 @@ const ProblemPage = () => {
                                 style={{ width: '100%', height: '100%' }}
                             />
                         </div>
-
                     </motion.div>
                 )}
             </AnimatePresence>
