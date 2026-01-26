@@ -45,6 +45,7 @@ const ProblemPage = () => {
     // Refs for instant feedback logic
     const submittingRef = useRef(false);
     const hasFailedRef = useRef(false);
+    const successSoundPlayedRef = useRef(false);
 
     // Language Dropdown State
     const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
@@ -94,9 +95,12 @@ const ProblemPage = () => {
             if (submittingRef.current && !hasFailedRef.current) {
                 // If this is the last test case and it Passed
                 if (data.caseId === data.total - 1 && data.status === 'Passed') {
-                    playSubmittedSound();
-                    setShowSuccessAnimations(true);
-                    setTimeout(() => setShowSuccessAnimations(false), 5000);
+                    if (!successSoundPlayedRef.current) {
+                        playSubmittedSound();
+                        successSoundPlayedRef.current = true;
+                        setShowSuccessAnimations(true);
+                        setTimeout(() => setShowSuccessAnimations(false), 5000);
+                    }
                 }
             }
 
@@ -271,6 +275,7 @@ const ProblemPage = () => {
         setSubmitting(true);
         submittingRef.current = true; // Enable socket trigger
         hasFailedRef.current = false; // Reset fail tracker
+        successSoundPlayedRef.current = false; // Reset sound tracker
 
         setTestResults(null);
         setActiveTab('results');
@@ -285,9 +290,10 @@ const ProblemPage = () => {
 
             // Play Sound based on final result (Fallback if socket didn't trigger, or redundantly safe)
             if (response.data.result.passed === response.data.result.total) {
-                // If animation isn't already showing (e.g. from socket), trigger it
-                if (!showSuccessAnimations) {
+                // If animation/sound hasn't happened yet (via socket), trigger it
+                if (!successSoundPlayedRef.current) {
                     playSubmittedSound();
+                    successSoundPlayedRef.current = true;
                     setShowSuccessAnimations(true);
                     setTimeout(() => setShowSuccessAnimations(false), 5000); // Auto-hide after 5s
                 }
