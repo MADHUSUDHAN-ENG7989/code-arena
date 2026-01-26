@@ -272,7 +272,7 @@ const ProblemPage = () => {
         setSubmitting(true);
         submittingRef.current = true; // Enable socket trigger
         hasFailedRef.current = false; // Reset fail tracker
-        successSoundPlayedRef.current = false; // Reset sound tracker
+        successSoundPlayedRef.current = false; // Reset sound tracker (Animation removed, audio only)
 
         setTestResults(null);
         setActiveTab('results');
