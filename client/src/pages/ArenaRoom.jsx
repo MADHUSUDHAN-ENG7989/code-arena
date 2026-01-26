@@ -56,6 +56,22 @@ const ArenaRoom = () => {
     const [leaderboard, setLeaderboard] = useState([]);
     const [isDevBannerVisible, setIsDevBannerVisible] = useState(false);
 
+    // Language Dropdown State
+    const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+    const langDropdownRef = useRef(null);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (langDropdownRef.current && !langDropdownRef.current.contains(event.target)) {
+                setIsLangDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
     useEffect(() => {
         socketRef.current = io(ENDPOINT);
 
@@ -497,21 +513,42 @@ const ArenaRoom = () => {
                 <div className="flex-1 flex flex-col bg-[#1E1E1E] relative min-w-0">
                     {/* Editor Toolbar */}
                     <div className="h-16 border-b border-[#2A2A2A] bg-[#1E1E1E] flex items-center justify-between px-6 shrink-0 z-10">
-                        <div className="flex items-center gap-2 relative group">
-                            <select
-                                value={language}
-                                onChange={(e) => setLanguage(e.target.value)}
-                                className="appearance-none bg-[#2A2A2A] text-gray-200 text-sm font-bold pl-4 pr-10 py-2.5 rounded-lg hover:bg-[#333] transition-colors border border-gray-700 focus:ring-0 cursor-pointer uppercase tracking-widest outline-none"
+                        <div className="relative" ref={langDropdownRef}>
+                            <button
+                                onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+                                className="flex items-center gap-2 bg-[#2A2A2A] text-gray-200 text-sm font-bold pl-4 pr-3 py-2.5 rounded-lg hover:bg-[#333] transition-colors border border-gray-700 outline-none uppercase tracking-widest min-w-[150px] justify-between"
                             >
-                                <option value="javascript">JavaScript</option>
-                                <option value="python">Python</option>
-                                <option value="java">Java</option>
-                                <option value="cpp">C++</option>
-                                <option value="c">C</option>
-                            </select>
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-                            </div>
+                                <span>{language === 'cpp' ? 'C++' : language}</span>
+                                <svg
+                                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isLangDropdownOpen ? 'rotate-180' : ''}`}
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {isLangDropdownOpen && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-[#2A2A2A] border border-gray-700 rounded-lg shadow-xl overflow-hidden z-50 flex flex-col">
+                                    {['javascript', 'python', 'java', 'cpp', 'c'].map((lang) => (
+                                        <button
+                                            key={lang}
+                                            onClick={() => {
+                                                setLanguage(lang);
+                                                setIsLangDropdownOpen(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-3 text-sm font-bold uppercase tracking-widest transition-colors flex items-center justify-between ${language === lang
+                                                ? 'bg-indigo-600/20 text-indigo-400'
+                                                : 'text-gray-300 hover:bg-[#333] hover:text-white'
+                                                }`}
+                                        >
+                                            {lang === 'cpp' ? 'C++' : lang}
+                                            {language === lang && <span className="text-indigo-400">✓</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div className="flex items-center gap-3">
                             <button

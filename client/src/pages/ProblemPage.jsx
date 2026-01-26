@@ -40,6 +40,20 @@ const ProblemPage = () => {
     const [liveTestResults, setLiveTestResults] = useState([]); // Real-time results
     const [lastSubmission, setLastSubmission] = useState(null);
 
+    // Language Dropdown State
+    const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+    const langDropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (langDropdownRef.current && !langDropdownRef.current.contains(event.target)) {
+                setIsLangDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const socket = useSocket();
 
     const playDingSound = () => {
@@ -594,85 +608,72 @@ const ProblemPage = () => {
                                 </span>
                                 <span className="text-gray-600">|</span>
                                 {
-                                    (() => {
-                                        const [isOpen, setIsOpen] = useState(false);
-                                        const languages = [
-                                            { id: 'javascript', label: 'JavaScript', icon: '⚡' },
-                                            { id: 'python', label: 'Python', icon: '🐍' },
-                                            { id: 'java', label: 'Java', icon: '☕' },
-                                            { id: 'cpp', label: 'C++', icon: '🚀' },
-                                            { id: 'c', label: 'C', icon: '🔧' }
-                                        ];
-                                        const currentLang = languages.find(l => l.id === language) || languages[0];
-                                        const dropdownRef = useRef(null);
+                                    <div className="relative" ref={langDropdownRef}>
+                                        <button
+                                            onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#252526] hover:bg-[#2d2d2d] transition-colors border border-gray-700/50 text-xs font-medium text-gray-300 min-w-[120px] justify-between group"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                {(() => {
+                                                    const languages = [
+                                                        { id: 'javascript', label: 'JavaScript', icon: '⚡' },
+                                                        { id: 'python', label: 'Python', icon: '🐍' },
+                                                        { id: 'java', label: 'Java', icon: '☕' },
+                                                        { id: 'cpp', label: 'C++', icon: '🚀' },
+                                                        { id: 'c', label: 'C', icon: '🔧' }
+                                                    ];
+                                                    const currentLang = languages.find(l => l.id === language) || languages[0];
+                                                    return (
+                                                        <>
+                                                            <span className="opacity-70">{currentLang.icon}</span>
+                                                            {currentLang.label}
+                                                        </>
+                                                    );
+                                                })()}
+                                            </span>
+                                            <FiChevronDown className={`w-3 h-3 transition-transform duration-300 ${isLangDropdownOpen ? 'rotate-180 text-emerald-500' : 'text-gray-500'}`} />
+                                        </button>
 
-                                        useEffect(() => {
-                                            const handleClickOutside = (event) => {
-                                                if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                                                    setIsOpen(false);
-                                                }
-                                            };
-                                            document.addEventListener('mousedown', handleClickOutside);
-                                            return () => document.removeEventListener('mousedown', handleClickOutside);
-                                        }, []);
-
-                                        return (
-                                            <div className="relative" ref={dropdownRef}>
-                                                <button
-                                                    onClick={() => setIsOpen(!isOpen)}
-                                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#252526] hover:bg-[#2d2d2d] transition-colors border border-gray-700/50 text-xs font-medium text-gray-300 min-w-[120px] justify-between group"
+                                        <AnimatePresence>
+                                            {isLangDropdownOpen && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                    exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                                                    transition={{ duration: 0.1 }}
+                                                    className="absolute top-full left-0 mt-1 w-40 !bg-[#1E1E1E] border border-[#333] rounded-md shadow-2xl overflow-hidden z-[9999]"
                                                 >
-                                                    <span className="flex items-center gap-2">
-                                                        <span className="opacity-70">{currentLang.icon}</span>
-                                                        {currentLang.label}
-                                                    </span>
-                                                    <FiChevronDown className={`w-3 h-3 transition-transform duration-300 ${isOpen ? 'rotate-180 text-emerald-500' : 'text-gray-500'}`} />
-                                                </button>
-
-                                                <AnimatePresence>
-                                                    {isOpen && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                            exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                                                            transition={{ duration: 0.1 }}
-                                                            className="absolute top-full left-0 mt-1 w-40 rounded-md shadow-2xl overflow-hidden z-[100]"
-                                                            className="absolute top-full left-0 mt-1 w-40 !bg-[#1e1e1e] border border-[#333] rounded-md shadow-2xl overflow-hidden z-[9999]"
-                                                            style={{ borderColor: '#333', borderWidth: '1px', borderStyle: 'solid' }}
-                                                        >
-                                                            <div className="py-1">
-                                                                {languages.map((lang) => (
-                                                                    <button
-                                                                        key={lang.id}
-                                                                        onClick={() => {
-                                                                            handleLanguageChange(lang.id);
-                                                                            setIsOpen(false);
-                                                                        }}
-                                                                        className="w-full text-left flex items-center gap-3 px-3 py-2 text-xs font-medium transition-colors !text-white"
-                                                                        style={{
-                                                                            backgroundColor: language === lang.id ? '#094771' : 'transparent',
-                                                                        }}
-                                                                        onMouseEnter={(e) => {
-                                                                            if (language !== lang.id) e.currentTarget.style.backgroundColor = '#2a2d2e';
-                                                                        }}
-                                                                        onMouseLeave={(e) => {
-                                                                            if (language !== lang.id) e.currentTarget.style.backgroundColor = 'transparent';
-                                                                        }}
-                                                                    >
-                                                                        <span className="shrink-0 w-4 text-center">{lang.icon}</span>
-                                                                        {lang.label}
-                                                                        {language === lang.id && (
-                                                                            <span className="ml-auto text-white">✓</span>
-                                                                        )}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                        );
-                                    })()
+                                                    <div className="py-1">
+                                                        {[
+                                                            { id: 'javascript', label: 'JavaScript', icon: '⚡' },
+                                                            { id: 'python', label: 'Python', icon: '🐍' },
+                                                            { id: 'java', label: 'Java', icon: '☕' },
+                                                            { id: 'cpp', label: 'C++', icon: '🚀' },
+                                                            { id: 'c', label: 'C', icon: '🔧' }
+                                                        ].map((lang) => (
+                                                            <button
+                                                                key={lang.id}
+                                                                onClick={() => {
+                                                                    handleLanguageChange(lang.id);
+                                                                    setIsLangDropdownOpen(false);
+                                                                }}
+                                                                className={`w-full text-left flex items-center gap-3 px-3 py-2 text-xs font-medium transition-colors ${language === lang.id
+                                                                    ? 'bg-[#094771] text-white'
+                                                                    : 'text-gray-300 hover:bg-[#2A2D2E] hover:text-white'
+                                                                    }`}
+                                                            >
+                                                                <span className="shrink-0 w-4 text-center">{lang.icon}</span>
+                                                                {lang.label}
+                                                                {language === lang.id && (
+                                                                    <span className="ml-auto text-white">✓</span>
+                                                                )}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
                                 }
                             </div>
                             <div className="flex items-center gap-2">
