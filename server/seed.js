@@ -45,7 +45,7 @@ You can return the answer in any order.`,
             { input: '1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20\\n39', output: '18 19', isHidden: true },
             { input: '-10 7 19 15\\n9', output: '0 2', isHidden: true },
             { input: '2 2\\n4', output: '0 1', isHidden: true },
-            { input: '1 5 9 13 17\\n22', output: '2 3', isHidden: true },
+            { input: '1 6 9 13 17\\n22', output: '2 3', isHidden: true },
             { input: '1000 2000 3000\\n5000', output: '1 2', isHidden: true },
         ],
         starterCode: {

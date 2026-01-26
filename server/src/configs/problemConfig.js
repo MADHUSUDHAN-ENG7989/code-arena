@@ -93,7 +93,14 @@ const PROBLEM_CONFIG = {
     'remove-duplicates-from-sorted-list': { fn: 'deleteDuplicates', args: [{ type: 'ListNode', name: 'head' }], returnType: 'ListNode' },
     'merge-two-sorted-lists': { fn: 'mergeTwoLists', args: [{ type: 'ListNode', name: 'list1' }, { type: 'ListNode', name: 'list2' }], returnType: 'ListNode' },
     'symmetric-tree': { fn: 'isSymmetric', args: [{ type: 'TreeNode', name: 'root' }], returnType: 'boolean' },
-    'first-unique-character-in-a-string': { fn: 'firstUniqChar', args: [{ type: 'string', name: 's' }], returnType: 'int' }
+    'first-unique-character-in-a-string': { fn: 'firstUniqChar', args: [{ type: 'string', name: 's' }], returnType: 'int' },
+    'detect-capital': {
+        fn: 'detectCapitalUse',
+        args: [
+            { type: 'string', name: 'word' }
+        ],
+        returnType: 'boolean'
+    }
 };
 
 module.exports = PROBLEM_CONFIG;

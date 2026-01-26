@@ -164,7 +164,7 @@ import java.util.stream.*;
         if (config.args.some(a => a.type === 'TreeNode') || config.returnType === 'TreeNode') helpers += JAVA_TREE_NODE;
 
         const mainStart = `
-public class Main {
+class Main {
     public static void main(String[] args) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         StringBuilder inputBuilder = new StringBuilder();
@@ -243,7 +243,7 @@ public class Main {
             output = `System.out.println(result);\n`;
         }
 
-        FINAL_CODE = allImports + mainStart + parsing + execution + "    }\n}\n" + helpers + "\n" + cleanUserCodeLines.join('\n');
+        FINAL_CODE = allImports + mainStart + parsing + execution + output + "    }\n}\n" + helpers + "\n" + cleanUserCodeLines.join('\n');
 
     } else if (language === 'cpp') {
         // (Implementation logic similar to JS/Java/Python but with C++ syntax)
@@ -763,11 +763,10 @@ const executeCode = async (code, language, input, slug) => {
         if (slug) {
             finalCode = generateDriver(code, language, slug);
             if (language === 'java') {
-                console.log("[EXECUTOR] Java Driver Generated. Preview:");
-                console.log("[EXECUTOR] Java Driver Generated. Preview:");
-                console.log(finalCode);
+                console.log("[EXECUTOR] Java Driver Generated. Preview (Writing to file)");
+                require('fs').writeFileSync('server/java_debug.java', finalCode);
                 if (finalCode.includes("public class Main")) console.log("[EXECUTOR] Main class found in generated code.");
-                else console.warn("[EXECUTOR] WARNING: Main class NOT FOUND in generated code!");
+                else console.warn("[EXECUTOR] WARNING: Main class NOT FOUND in generated code (Correct for Piston)!");
             }
         }
 
