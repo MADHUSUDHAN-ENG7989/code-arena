@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiChevronDown } from 'react-icons/fi';
+import { FiChevronDown, FiVolume2, FiVolumeX } from 'react-icons/fi';
 // import confetti from 'canvas-confetti';
 // import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { questionsAPI, submissionsAPI } from '../lib/api';
@@ -39,6 +39,7 @@ const ProblemPage = () => {
     const [analyzing, setAnalyzing] = useState(false);
     const [liveTestResults, setLiveTestResults] = useState([]); // Real-time results
     const [lastSubmission, setLastSubmission] = useState(null);
+    const [isSoundEnabled, setIsSoundEnabled] = useState(true);
 
     // Refs for instant feedback logic
     const submittingRef = useRef(false);
@@ -62,17 +63,20 @@ const ProblemPage = () => {
     const socket = useSocket();
 
     const playDingSound = () => {
+        if (!isSoundEnabled) return;
         // Using a real short ding base64 to ensure it plays without external dependencies
         const ding = "data:audio/mp3;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAGDgYtAgAyN+QWaAAihwMWm4G8QQRDiMcCBcH3Cc+CDv/7cQBMNJcq77Wh7tvJhF7kmIPVnBa1ifCJ6dy0ryVzSuAvjG+CsQCNzpE1BVipEMZYqVOg9MNoL8wpCFQhbFCMmjZmOzOlQ4xP6f8aDwmCJMbcsMcGCxaCQtsGPhv26qTooQa1bjubN9HVgnbyhLKwBAbD9p+/AHQto8YgBQOAyuI6qRclqSRn/6sRAAA";
         new Audio(ding).play().catch(e => console.error("Error playing sound:", e));
     };
 
     const playSubmittedSound = () => {
+        if (!isSoundEnabled) return;
         const audio = new Audio('/sounds/submitted.mp3');
         audio.play().catch(e => console.error("Error playing sound:", e));
     };
 
     const playFailSound = () => {
+        if (!isSoundEnabled) return;
         const audio = new Audio('/sounds/fail.mp3');
         audio.play().catch(e => console.error("Error playing sound:", e));
     };
@@ -728,6 +732,14 @@ const ProblemPage = () => {
                                 </button>
 
                                 <button onClick={() => setCode(question.starterCode?.[language] || '')} className="p-1.5 hover:bg-[#333] rounded text-gray-400 hover:text-red-400 transition-colors" title="Reset to Starter Code"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                <div className="w-px h-4 bg-[#333] mx-1"></div>
+                                <button
+                                    onClick={() => setIsSoundEnabled(!isSoundEnabled)}
+                                    className={`p-1.5 rounded transition-colors ${isSoundEnabled ? 'text-gray-400 hover:text-emerald-400 hover:bg-[#333]' : 'text-red-400 hover:text-red-300 hover:bg-[#333]'}`}
+                                    title={isSoundEnabled ? "Mute Sounds" : "Unmute Sounds"}
+                                >
+                                    {isSoundEnabled ? <FiVolume2 className="w-4 h-4" /> : <FiVolumeX className="w-4 h-4" />}
+                                </button>
                             </div>
                         </div>
                         <div className="flex-1 relative">
