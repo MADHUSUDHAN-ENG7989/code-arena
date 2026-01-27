@@ -100,6 +100,20 @@ const PROBLEM_CONFIG = {
             { type: 'string', name: 'word' }
         ],
         returnType: 'boolean'
+    },
+    'remove-duplicates-from-sorted-array': {
+        fn: 'removeDuplicates',
+        args: [
+            { type: 'int[]', name: 'nums' }
+        ],
+        returnType: 'int'
+    },
+    'maximum-subarray': {
+        fn: 'maxSubArray',
+        args: [
+            { type: 'int[]', name: 'nums' }
+        ],
+        returnType: 'int'
     }
 };
 

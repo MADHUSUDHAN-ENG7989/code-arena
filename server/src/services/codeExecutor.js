@@ -764,7 +764,8 @@ const executeCode = async (code, language, input, slug) => {
             finalCode = generateDriver(code, language, slug);
             if (language === 'java') {
                 console.log("[EXECUTOR] Java Driver Generated. Preview (Writing to file)");
-                require('fs').writeFileSync('server/java_debug.java', finalCode);
+                // Fix: Write to root or temp, avoid 'server/' prefix which might be invalid relative to CWD
+                require('fs').writeFileSync('java_debug.java', finalCode);
                 if (finalCode.includes("public class Main")) console.log("[EXECUTOR] Main class found in generated code.");
                 else console.warn("[EXECUTOR] WARNING: Main class NOT FOUND in generated code (Correct for Piston)!");
             }
