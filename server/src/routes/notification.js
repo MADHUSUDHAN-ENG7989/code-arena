@@ -65,13 +65,23 @@ router.put('/mark-all-read', protect, async (req, res) => {
 router.post('/friend-request/respond', protect, async (req, res) => {
     const { notificationId, action } = req.body; // action: 'accept' or 'reject'
 
+    console.log('[FRIEND-REQUEST-RESPOND] Request received:', { notificationId, action, userId: req.userId });
+
     try {
         const notification = await Notification.findOne({
             _id: notificationId,
             recipient: req.userId
         });
 
+        console.log('[FRIEND-REQUEST-RESPOND] Notification found:', notification ? {
+            id: notification._id,
+            type: notification.type,
+            sender: notification.sender,
+            recipient: notification.recipient
+        } : 'NOT FOUND');
+
         if (!notification || notification.type !== 'friend_request') {
+            console.log('[FRIEND-REQUEST-RESPOND] Invalid notification - type:', notification?.type);
             return res.status(404).json({ message: 'Invalid friend request notification' });
         }
 
@@ -79,17 +89,33 @@ router.post('/friend-request/respond', protect, async (req, res) => {
         const user = await User.findById(req.userId);
         const requester = await User.findById(requesterId);
 
+        console.log('[FRIEND-REQUEST-RESPOND] Users lookup:', {
+            userFound: !!user,
+            requesterFound: !!requester,
+            requesterId: requesterId?.toString(),
+            userFriendRequestsCount: user?.friendRequests?.length
+        });
+
         if (!user || !requester) {
+            console.log('[FRIEND-REQUEST-RESPOND] User not found');
             return res.status(404).json({ message: 'User not found' });
         }
 
         // Find the specific request in user's friendRequests array
+        console.log('[FRIEND-REQUEST-RESPOND] FriendRequests array:', user.friendRequests.map(fr => ({
+            from: fr.from?.toString(),
+            status: fr.status
+        })));
+
         const requestIndex = user.friendRequests.findIndex(
             r => r.from.toString() === requesterId.toString() && r.status === 'pending'
         );
 
+        console.log('[FRIEND-REQUEST-RESPOND] Request index found:', requestIndex);
+
         if (requestIndex === -1) {
             // Even if not found in array (maybe already handled), we should update notification
+            console.log('[FRIEND-REQUEST-RESPOND] Request not found - returning 400');
             notification.isRead = true;
             await notification.save();
             return res.status(400).json({ message: 'Friend request no longer pending' });
