@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
-import axios from 'axios';
+import api from '../lib/api';
 import ToastNotification from '../components/ToastNotification';
 
 const NotificationContext = createContext(null);
@@ -20,10 +20,7 @@ export const NotificationProvider = ({ children }) => {
     const fetchNotifications = useCallback(async () => {
         if (!user) return;
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:5000/api/notifications', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get('/notifications');
             setNotifications(res.data.notifications);
             setUnreadCount(res.data.unreadCount);
         } catch (error) {
@@ -61,10 +58,7 @@ export const NotificationProvider = ({ children }) => {
             ));
             setUnreadCount(prev => Math.max(0, prev - 1));
 
-            const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:5000/api/notifications/${notificationId}/read`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put(`/notifications/${notificationId}/read`);
         } catch (error) {
             console.error('Error marking read:', error);
             // Revert if needed, but low priority
@@ -76,10 +70,7 @@ export const NotificationProvider = ({ children }) => {
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
             setUnreadCount(0);
 
-            const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:5000/api/notifications/mark-all-read`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put('/notifications/mark-all-read');
         } catch (error) {
             console.error('Error marking all read:', error);
         }
@@ -87,11 +78,7 @@ export const NotificationProvider = ({ children }) => {
 
     const respondToFriendRequest = async (notificationId, action) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post(`http://localhost:5000/api/notifications/friend-request/respond`,
-                { notificationId, action },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.post('/notifications/friend-request/respond', { notificationId, action });
 
             // Mark as read locally and maybe remove specific actions if UI needs update
             markAsRead(notificationId);
