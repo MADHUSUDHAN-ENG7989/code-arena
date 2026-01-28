@@ -6,6 +6,7 @@ const DailyChallenge = require('./src/models/DailyChallenge');
 const Notification = require('./src/models/Notification');
 const questionsData = require('./new_questions');
 const questions20 = require('./questions_20');
+const questions12 = require('./questions_12');
 
 const sampleQuestions = [
     {
@@ -418,7 +419,7 @@ async function seedDatabase() {
 
         // Create questions
         // Combine all questions
-        const allQuestions = [...sampleQuestions, ...questionsData, ...questions20];
+        const allQuestions = [...sampleQuestions, ...questionsData, ...questions20, ...questions12];
 
         const questions = await Question.insertMany(allQuestions);
         console.log(`Created ${allQuestions.length} sample questions`);

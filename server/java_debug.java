@@ -16,25 +16,17 @@ class Main {
         
         String[] lines = input.replace("\\n", "\n").split("\n");
         Solution solution = new Solution();
-String[] prices_str = lines[0].trim().split("\\s+");
-int[] prices = new int[prices_str.length];
-for(int i=0;i<prices_str.length;i++) prices[i] = Integer.parseInt(prices_str[i]);
-int result = solution.maxProfit(prices);
+String[] nums_str = lines[0].trim().split("\\s+");
+int[] nums = new int[nums_str.length];
+for(int i=0;i<nums_str.length;i++) nums[i] = Integer.parseInt(nums_str[i]);
+int result = solution.maxSubarraySumCircular(nums);
 System.out.println(result);
     }
 }
 
 class Solution {
-    public int maxProfit(int[] prices) {
-        int minPrice = Integer.MAX_VALUE;
-        int maxProfit = 0;
-        for (int price : prices) {
-            if (price < minPrice) {
-                minPrice = price;
-            } else if (price - minPrice > maxProfit) {
-                maxProfit = price - minPrice;
-            }
-        }
-        return maxProfit;
+    public int maxSubarraySumCircular(int[] nums) {
+        // Your code here
+        return 0;
     }
 }

@@ -114,7 +114,20 @@ const PROBLEM_CONFIG = {
             { type: 'int[]', name: 'nums' }
         ],
         returnType: 'int'
-    }
+    },
+    // --- Batch 2 New Questions ---
+    'subarray-with-given-sum': { fn: 'subarraySum', args: [{ type: 'int[]', name: 'nums' }, { type: 'int', name: 'target' }], returnType: 'int[]', sortResult: false },
+    'maximum-product-subarray': { fn: 'maxProduct', args: [{ type: 'int[]', name: 'nums' }], returnType: 'int' },
+    'rotate-array-by-k-positions': { fn: 'rotate', args: [{ type: 'int[]', name: 'nums' }, { type: 'int', name: 'k' }], returnType: 'int[]' },
+    'find-all-leaders-in-an-array': { fn: 'leaders', args: [{ type: 'int[]', name: 'nums' }], returnType: 'int[]' },
+    'longest-consecutive-subsequence': { fn: 'longestConsecutive', args: [{ type: 'int[]', name: 'nums' }], returnType: 'int' },
+    'rearrange-array-alternately': { fn: 'rearrange', args: [{ type: 'int[]', name: 'nums' }], returnType: 'int[]' },
+    'find-missing-and-repeating-number': { fn: 'findTwoElement', args: [{ type: 'int[]', name: 'arr' }], returnType: 'int[]' },
+    'count-subarrays-with-equal-0s-and-1s': { fn: 'countSubarrWithEqualZeroAndOne', args: [{ type: 'int[]', name: 'arr' }], returnType: 'int' },
+    'merge-intervals': { fn: 'merge', args: [{ type: 'string', name: 'intervalsStr' }], returnType: 'string' }, // Workaround used: Input/Output as string
+    'find-peak-element': { fn: 'findPeakElement', args: [{ type: 'int[]', name: 'nums' }], returnType: 'int' },
+    'smallest-subarray-with-sum-greater-than-x': { fn: 'smallestSubWithSum', args: [{ type: 'int[]', name: 'a' }, { type: 'int', name: 'x' }], returnType: 'int' },
+    'maximum-sum-circular-subarray': { fn: 'maxSubarraySumCircular', args: [{ type: 'int[]', name: 'nums' }], returnType: 'int' }
 };
 
 module.exports = PROBLEM_CONFIG;

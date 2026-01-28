@@ -62,21 +62,27 @@ const ProblemPage = () => {
 
     const socket = useSocket();
 
+    // Sound Check Ref to avoid stale closures in socket listeners
+    const soundEnabledRef = useRef(true);
+    useEffect(() => {
+        soundEnabledRef.current = isSoundEnabled;
+    }, [isSoundEnabled]);
+
     const playDingSound = () => {
-        if (!isSoundEnabled) return;
+        if (!soundEnabledRef.current) return;
         // Using a real short ding base64 to ensure it plays without external dependencies
         const ding = "data:audio/mp3;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAGDgYtAgAyN+QWaAAihwMWm4G8QQRDiMcCBcH3Cc+CDv/7cQBMNJcq77Wh7tvJhF7kmIPVnBa1ifCJ6dy0ryVzSuAvjG+CsQCNzpE1BVipEMZYqVOg9MNoL8wpCFQhbFCMmjZmOzOlQ4xP6f8aDwmCJMbcsMcGCxaCQtsGPhv26qTooQa1bjubN9HVgnbyhLKwBAbD9p+/AHQto8YgBQOAyuI6qRclqSRn/6sRAAA";
         new Audio(ding).play().catch(e => console.error("Error playing sound:", e));
     };
 
     const playSubmittedSound = () => {
-        if (!isSoundEnabled) return;
+        if (!soundEnabledRef.current) return;
         const audio = new Audio('/sounds/submitted.mp3');
         audio.play().catch(e => console.error("Error playing sound:", e));
     };
 
     const playFailSound = () => {
-        if (!isSoundEnabled) return;
+        if (!soundEnabledRef.current) return;
         const audio = new Audio('/sounds/fail.mp3');
         audio.play().catch(e => console.error("Error playing sound:", e));
     };
