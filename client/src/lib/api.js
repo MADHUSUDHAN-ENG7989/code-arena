@@ -13,7 +13,7 @@ const getApiUrl = () => {
         // If deployed on Vercel, the backend is on Render
         // Check if we're on vercel.app domain
         if (window.location.hostname.includes('vercel.app')) {
-            return 'https://code-arena-kxy5.onrender.com/api';
+            return 'https://code-arena-api-5am7.onrender.com/api';
         }
         // Otherwise use same origin (for when backend serves frontend)
         return `${window.location.origin}/api`;
