@@ -85,7 +85,7 @@ router.post('/friend-request/respond', protect, async (req, res) => {
 
         // Find the specific request in user's friendRequests array
         const requestIndex = user.friendRequests.findIndex(
-            req => req.from.toString() === requesterId.toString() && req.status === 'pending'
+            r => r.from.toString() === requesterId.toString() && r.status === 'pending'
         );
 
         if (requestIndex === -1) {
