@@ -125,18 +125,9 @@ while len(lines) < required_args:
             }
         });
 
-        // Convert camelCase function name to snake_case for Python
-        const snakeCaseFn = config.fn.replace(/([A-Z])/g, '_$1').toLowerCase();
-
-        // Keep user's function standalone, then create a Solution class that wraps it
-        const wrapperClass = `
-class Solution:
-    def ${config.fn}(self, ${argNames.join(', ')}):
-        return ${snakeCaseFn}(${argNames.join(', ')})
-`;
-
         // Instantiate Solution class and call method
-        const fnName = config.fn; // Use original camelCase name
+        // Starter codes now include Solution class directly
+        const fnName = config.fn;
         let execution = `sol = Solution()\nresult = sol.${fnName}(${argNames.join(', ')})\n`;
         let output = '';
         if (config.returnType === 'int[]') {
@@ -150,7 +141,7 @@ class Solution:
             output = `print(result)\n`;
         }
 
-        FINAL_CODE = imports + helpers + FINAL_CODE + `\n` + wrapperClass + parsing + execution + output;
+        FINAL_CODE = imports + helpers + FINAL_CODE + `\n` + parsing + execution + output;
 
     } else if (language === 'java') {
         // Import extraction logic (Same as before)
