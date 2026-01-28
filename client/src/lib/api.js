@@ -1,6 +1,29 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Smart API URL detection for production
+const getApiUrl = () => {
+    // If explicitly set via environment variable, use it
+    if (import.meta.env.VITE_API_URL) {
+        return import.meta.env.VITE_API_URL;
+    }
+
+    // In production (Vercel), use same origin if backend is served from same domain,
+    // or use the Render backend URL
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+        // If deployed on Vercel, the backend is on Render
+        // Check if we're on vercel.app domain
+        if (window.location.hostname.includes('vercel.app')) {
+            return 'https://code-arena-kxy5.onrender.com/api';
+        }
+        // Otherwise use same origin (for when backend serves frontend)
+        return `${window.location.origin}/api`;
+    }
+
+    // Local development fallback
+    return 'http://localhost:5000/api';
+};
+
+const API_URL = getApiUrl();
 console.log('API_URL:', API_URL); // Debug log
 
 const api = axios.create({
