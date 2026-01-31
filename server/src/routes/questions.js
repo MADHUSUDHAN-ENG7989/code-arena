@@ -8,8 +8,12 @@ const router = express.Router();
 // Get all questions
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const { topic, difficulty } = req.query;
+        const { topic, difficulty, search } = req.query;
         const filter = {};
+
+        if (search) {
+            filter.title = { $regex: search, $options: 'i' };
+        }
 
         if (topic) {
             filter.topic = topic;
