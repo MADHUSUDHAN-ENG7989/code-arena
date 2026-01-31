@@ -19,6 +19,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import MeetTheDeveloper from './pages/MeetTheDeveloper';
 import InvitationListener from './components/InvitationListener';
 import MobileRestriction from './components/MobileRestriction';
+import MaintenancePage from './pages/MaintenancePage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -173,6 +174,12 @@ function AppRoutes() {
 }
 
 function App() {
+    const isMaintenanceMode = import.meta.env.VITE_MAINTENANCE_MODE === 'true';
+
+    if (isMaintenanceMode) {
+        return <MaintenancePage />;
+    }
+
     return (
         <BrowserRouter>
             <AuthProvider>
