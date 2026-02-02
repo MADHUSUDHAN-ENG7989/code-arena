@@ -5,6 +5,7 @@ const User = require('../models/User');
 const { authMiddleware } = require('../middleware/auth');
 const { runTestCases } = require('../services/codeExecutor');
 const { analyzeCode } = require('../services/aiAnalysis');
+const { logCodeRun, logCodeSubmit } = require('../services/activityLogger');
 
 const router = express.Router();
 
@@ -36,6 +37,12 @@ router.post('/run', authMiddleware, async (req, res) => {
         }));
 
         const result = await runTestCases(code, language, testCases, question.slug, req.userId);
+
+        // Log code run activity
+        const user = await User.findById(req.userId);
+        if (user) {
+            await logCodeRun(user._id, user.name, user.rollNumber, questionId, question.title, language, result, req);
+        }
 
         res.json(result);
     } catch (error) {
@@ -142,8 +149,13 @@ router.post('/submit', authMiddleware, async (req, res) => {
         question.acceptanceRate = (question.solvedBy / question.submissions) * 100;
         await question.save();
 
-        // Update user if accepted
+        // Log code submission activity
         const user = await User.findById(req.userId);
+        if (user) {
+            await logCodeSubmit(user._id, user.name, user.rollNumber, questionId, question.title, language, verdict, result, req);
+        }
+
+        // Update user if accepted
         if (user && verdict === 'Accepted') {
             if (!user.solvedQuestions.includes(question._id)) {
                 user.solvedQuestions.push(question._id);

@@ -87,6 +87,10 @@ export const adminAPI = {
     deleteQuestion: (id) => api.delete(`/admin/questions/${id}`),
 
     setDailyChallenge: (data) => api.post('/admin/daily-challenge', data),
+
+    // Activity Logs & Stats
+    getLogs: (params) => api.get('/admin/logs', { params }),
+    getStats: () => api.get('/admin/stats'),
 };
 
 // Social APIs

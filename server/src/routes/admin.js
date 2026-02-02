@@ -2,6 +2,8 @@ const express = require('express');
 const User = require('../models/User');
 const Question = require('../models/Question');
 const DailyChallenge = require('../models/DailyChallenge');
+const ActivityLog = require('../models/ActivityLog');
+const Submission = require('../models/Submission');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -239,6 +241,236 @@ router.post('/daily-challenge', async (req, res) => {
         });
     } catch (error) {
         console.error('Set daily challenge error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get activity logs with filtering and pagination
+router.get('/logs', async (req, res) => {
+    try {
+        const {
+            activityType,
+            userId,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 50,
+            search
+        } = req.query;
+
+        const filter = {};
+
+        // Filter by activity type
+        if (activityType) {
+            filter.activityType = activityType;
+        }
+
+        // Filter by user ID
+        if (userId) {
+            filter.userId = userId;
+        }
+
+        // Search by user name or roll number
+        if (search) {
+            filter.$or = [
+                { userName: { $regex: search, $options: 'i' } },
+                { rollNumber: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Filter by date range
+        if (startDate || endDate) {
+            filter.timestamp = {};
+            if (startDate) {
+                filter.timestamp.$gte = new Date(startDate);
+            }
+            if (endDate) {
+                filter.timestamp.$lte = new Date(endDate);
+            }
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const [logs, total] = await Promise.all([
+            ActivityLog.find(filter)
+                .sort({ timestamp: -1 })
+                .skip(skip)
+                .limit(parseInt(limit))
+                .lean(),
+            ActivityLog.countDocuments(filter)
+        ]);
+
+        res.json({
+            logs,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Get logs error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get website statistics for admin dashboard
+router.get('/stats', async (req, res) => {
+    try {
+        // Basic counts
+        const [
+            totalUsers,
+            totalQuestions,
+            totalSubmissions,
+            activeUsers24h,
+            todayLogins,
+            todayCodeRuns,
+            todaySubmissions
+        ] = await Promise.all([
+            User.countDocuments({ isAdmin: false }),
+            Question.countDocuments(),
+            Submission.countDocuments(),
+            // Active users in last 24 hours (based on login activity)
+            ActivityLog.distinct('userId', {
+                activityType: 'LOGIN',
+                'details.success': true,
+                timestamp: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+            }).then(users => users.length),
+            // Today's login count
+            ActivityLog.countDocuments({
+                activityType: 'LOGIN',
+                'details.success': true,
+                timestamp: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+            }),
+            // Today's code run count
+            ActivityLog.countDocuments({
+                activityType: 'CODE_RUN',
+                timestamp: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+            }),
+            // Today's submission count
+            ActivityLog.countDocuments({
+                activityType: 'CODE_SUBMIT',
+                timestamp: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+            })
+        ]);
+
+        // Top 5 most active users (based on activity logs in last 7 days)
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const topActiveUsers = await ActivityLog.aggregate([
+            {
+                $match: {
+                    timestamp: { $gte: sevenDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: '$userId',
+                    userName: { $first: '$userName' },
+                    rollNumber: { $first: '$rollNumber' },
+                    activityCount: { $sum: 1 }
+                }
+            },
+            { $sort: { activityCount: -1 } },
+            { $limit: 5 }
+        ]);
+
+        // Activity trend for last 7 days
+        const activityTrend = await ActivityLog.aggregate([
+            {
+                $match: {
+                    timestamp: { $gte: sevenDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        date: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
+                        type: '$activityType'
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { '_id.date': 1 } }
+        ]);
+
+        // Most attempted questions (last 7 days)
+        const topQuestions = await ActivityLog.aggregate([
+            {
+                $match: {
+                    activityType: { $in: ['CODE_RUN', 'CODE_SUBMIT'] },
+                    timestamp: { $gte: sevenDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: '$details.questionId',
+                    questionTitle: { $first: '$details.questionTitle' },
+                    attempts: { $sum: 1 }
+                }
+            },
+            { $sort: { attempts: -1 } },
+            { $limit: 5 }
+        ]);
+
+        // Language usage statistics
+        const languageStats = await ActivityLog.aggregate([
+            {
+                $match: {
+                    activityType: { $in: ['CODE_RUN', 'CODE_SUBMIT'] },
+                    timestamp: { $gte: sevenDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: '$details.language',
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { count: -1 } }
+        ]);
+
+        // Success rate (accepted submissions vs total submissions in last 7 days)
+        const submissionStats = await ActivityLog.aggregate([
+            {
+                $match: {
+                    activityType: 'CODE_SUBMIT',
+                    timestamp: { $gte: sevenDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: 1 },
+                    accepted: {
+                        $sum: { $cond: ['$details.accepted', 1, 0] }
+                    }
+                }
+            }
+        ]);
+
+        const successRate = submissionStats.length > 0
+            ? (submissionStats[0].accepted / submissionStats[0].total * 100).toFixed(2)
+            : 0;
+
+        res.json({
+            overview: {
+                totalUsers,
+                totalQuestions,
+                totalSubmissions,
+                activeUsers24h,
+                todayLogins,
+                todayCodeRuns,
+                todaySubmissions,
+                successRate: parseFloat(successRate)
+            },
+            topActiveUsers,
+            activityTrend,
+            topQuestions,
+            languageStats
+        });
+    } catch (error) {
+        console.error('Get stats error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

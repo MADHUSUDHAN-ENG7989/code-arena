@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { authMiddleware } = require('../middleware/auth');
+const { logLogin } = require('../services/activityLogger');
 
 const router = express.Router();
 
@@ -17,12 +18,18 @@ router.post('/login', async (req, res) => {
         const user = await User.findOne({ rollNumber });
 
         if (!user) {
+            // Log failed login attempt
+            if (rollNumber) {
+                await logLogin(null, 'Unknown User', rollNumber, false, req);
+            }
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         const isMatch = await user.comparePassword(password);
 
         if (!isMatch) {
+            // Log failed login attempt
+            await logLogin(user._id, user.name, user.rollNumber, false, req);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
@@ -38,6 +45,9 @@ router.post('/login', async (req, res) => {
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Required for cross-site (Vercel -> Render)
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
+
+        // Log successful login
+        await logLogin(user._id, user.name, user.rollNumber, true, req);
 
         res.json({
             user: {
