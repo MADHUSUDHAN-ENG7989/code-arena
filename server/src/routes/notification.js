@@ -13,12 +13,57 @@ router.get('/', protect, async (req, res) => {
             .limit(50)
             .populate('sender', 'name rollNumber'); // Populate basic info if needed
 
-        const unreadCount = await Notification.countDocuments({
-            recipient: req.userId,
-            isRead: false
+        // Fetch current user to check friend status
+        const currentUser = await User.findById(req.userId).select('friends friendRequests');
+        const friendIds = new Set(currentUser.friends.map(id => id.toString()));
+        const requestStatusMap = new Map();
+        if (currentUser.friendRequests) {
+            currentUser.friendRequests.forEach(r => {
+                if (r.from) requestStatusMap.set(r.from.toString(), r.status);
+            });
+        }
+
+        // Process notifications to handle stale friend requests
+        const processedNotifications = notifications.map(n => {
+            if (n.type === 'friend_request' && n.sender) {
+                const senderId = n.sender._id.toString();
+
+                // If already friends, modify to show as accepted
+                if (friendIds.has(senderId)) {
+                    const nObj = n.toObject();
+                    nObj.type = 'system';
+                    nObj.message = 'Friend request accepted';
+                    nObj.isRead = true; // Effectively read
+                    return nObj;
+                }
+
+                // If explicitly rejected
+                if (requestStatusMap.get(senderId) === 'rejected') {
+                    const nObj = n.toObject();
+                    nObj.type = 'system';
+                    nObj.message = 'Friend request declined';
+                    nObj.isRead = true;
+                    return nObj;
+                }
+
+                // If status is accepted but somehow not in friends list yet (edge case)
+                if (requestStatusMap.get(senderId) === 'accepted') {
+                    const nObj = n.toObject();
+                    nObj.type = 'system';
+                    nObj.message = 'Friend request accepted';
+                    nObj.isRead = true;
+                    return nObj;
+                }
+            }
+            return n;
         });
 
-        res.json({ notifications, unreadCount });
+        // Recalculate unread count based on processed notifications
+        // Note: This is an approximation. If we want true sync, we should update DB.
+        // For now, we filter count based on what we return.
+        const unreadCount = processedNotifications.filter(n => !n.isRead).length;
+
+        res.json({ notifications: processedNotifications, unreadCount });
     } catch (error) {
         console.error('Error fetching notifications:', error);
         res.status(500).json({ message: 'Server error' });

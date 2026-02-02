@@ -1,8 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+    LuChevronDown, LuVolume2, LuVolumeX, LuFileText, LuHistory,
+    LuBookOpen, LuLockOpen, LuBrain, LuActivity, LuTimer,
+    LuDatabase, LuCircleCheck, LuCircleX, LuLightbulb, LuListChecks,
+    LuCircleAlert, LuShieldCheck, LuShieldAlert, LuTriangleAlert
+} from 'react-icons/lu';
 import { FiChevronDown, FiVolume2, FiVolumeX } from 'react-icons/fi';
+
+const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays < 30) return `${diffDays} days ago`;
+    const diffMonths = Math.floor(diffDays / 30);
+    if (diffMonths < 12) return `${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`;
+    const diffYears = Math.floor(diffDays / 365);
+    return `${diffYears} ${diffYears === 1 ? 'year' : 'years'} ago`;
+};
 // import confetti from 'canvas-confetti';
 // import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { questionsAPI, submissionsAPI } from '../lib/api';
@@ -40,6 +61,19 @@ const ProblemPage = () => {
     const [liveTestResults, setLiveTestResults] = useState([]); // Real-time results
     const [lastSubmission, setLastSubmission] = useState(null);
     const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+    const [currentSolverIndex, setCurrentSolverIndex] = useState(0);
+
+    // Ticker Logic
+    useEffect(() => {
+        if (question?.friendsSolved?.recentSolvers?.length > 0) {
+            const interval = setInterval(() => {
+                setCurrentSolverIndex((prev) =>
+                    (prev + 1) % question.friendsSolved.recentSolvers.length
+                );
+            }, 3000); // 3 seconds per name
+            return () => clearInterval(interval);
+        }
+    }, [question?.friendsSolved?.recentSolvers]);
 
     // Refs for instant feedback logic
     const submittingRef = useRef(false);
@@ -386,16 +420,16 @@ const ProblemPage = () => {
             {/* Main Content Area with Flexbox Layout (Fallback for Resizable Panels) */}
             <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
                 {/* Left Panel: Description */}
-                <div className="lg:w-1/2 w-full h-1/2 lg:h-full flex flex-col border-r border-[#282828] bg-[#282828]">
+                <div className="lg:w-1/2 w-full h-1/2 lg:h-full flex flex-col border-r border-[#282828] bg-[#282828] relative">
                     {/* Header Tabs (Description, Editorial, etc.) */}
                     <div className="h-10 px-2 bg-[#1A1A1A] flex items-center space-x-1 border-b border-[#282828] shrink-0">
                         <button onClick={() => setLeftTab('description')} className={`flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors border-t-2 relative top-[1px] ${leftTab === 'description' ? 'text-white bg-[#282828] border-transparent rounded-t-lg' : 'text-gray-500 border-transparent hover:text-white'}`}>
-                            <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <LuFileText className="w-4 h-4 text-blue-500" />
                             Description
                         </button>
                         {testResults && testResults.passed === testResults.total && (
                             <button onClick={() => setLeftTab('submission_result')} className={`flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors border-t-2 relative top-[1px] ${leftTab === 'submission_result' ? 'text-white bg-[#282828] border-transparent rounded-t-lg' : 'text-gray-500 border-transparent hover:text-white'}`}>
-                                <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <LuHistory className="w-4 h-4 text-emerald-500" />
                                 Submissions
                             </button>
                         )}
@@ -403,7 +437,7 @@ const ProblemPage = () => {
                     </div>
 
                     {/* Description Content */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-5">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-5 flex flex-col">
                         {leftTab === 'submission_result' ? (
                             <div className="animate-fade-in">
                                 <div className="flex items-center justify-between mb-6">
@@ -414,11 +448,11 @@ const ProblemPage = () => {
                                     </div>
                                     <div className="flex gap-2">
                                         <button className="px-3 py-1.5 text-xs font-medium bg-[#3C3C3C] text-gray-300 rounded-lg hover:bg-[#444] transition-colors flex items-center gap-2">
-                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                                            <LuBookOpen className="w-4 h-4" />
                                             Editorial
                                         </button>
                                         <button className="px-3 py-1.5 text-xs font-medium bg-emerald-600/20 text-emerald-500 rounded-lg border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors flex items-center gap-2">
-                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                            <LuLockOpen className="w-4 h-4" />
                                             Solution
                                         </button>
                                     </div>
@@ -429,7 +463,7 @@ const ProblemPage = () => {
                                     <div className="bg-[#3C3C3C] rounded-xl p-5 border border-[#555]">
                                         <div className="flex items-center gap-2 mb-4">
                                             <div className="p-1.5 bg-purple-500/20 rounded text-purple-400">
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                                                <LuBrain className="w-5 h-5" />
                                             </div>
                                             <h3 className="text-lg font-bold text-white">Code Analysis</h3>
                                         </div>
@@ -443,7 +477,7 @@ const ProblemPage = () => {
                                             analysis.error || analysis.fallback ? (
                                                 <div className="flex flex-col items-center py-4 text-center">
                                                     <div className="bg-red-500/10 p-2 rounded-full mb-3 text-red-400">
-                                                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                                        <LuCircleX className="w-6 h-6" />
                                                     </div>
                                                     <p className="text-red-400 text-sm font-medium mb-1">Analysis Failed</p>
                                                     <p className="text-gray-500 text-xs max-w-[200px]">{analysis.details || analysis.error || "Please try again later."}</p>
@@ -461,9 +495,9 @@ const ProblemPage = () => {
                                                         </div>
                                                         <div className={`flex items-center gap-2 text-xs font-bold px-3 py-1 rounded-full ${analysis.optimality?.status === 'Optimal' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'}`}>
                                                             {analysis.optimality?.status === 'Optimal' ? (
-                                                                <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg> Optimal</>
+                                                                <><LuCircleCheck className="w-4 h-4" /> Optimal</>
                                                             ) : (
-                                                                <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg> Suboptimal</>
+                                                                <><LuTriangleAlert className="w-4 h-4" /> Suboptimal</>
                                                             )}
                                                         </div>
                                                     </div>
@@ -472,7 +506,7 @@ const ProblemPage = () => {
                                                     <div className="grid grid-cols-2 gap-4">
                                                         {/* Time Complexity */}
                                                         <div className="bg-[#2A2A2A] rounded-lg p-4 border border-[#444]">
-                                                            <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Time Complexity</h4>
+                                                            <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2"><LuTimer className="w-4 h-4" /> Time Complexity</h4>
                                                             <div className="space-y-2 text-sm">
                                                                 <div className="flex justify-between"><span className="text-gray-500">Best</span> <span className="font-mono text-emerald-400">{analysis.timeComplexity?.best || "?"}</span></div>
                                                                 <div className="flex justify-between"><span className="text-gray-500">Average</span> <span className="font-mono text-blue-400">{analysis.timeComplexity?.average || "?"}</span></div>
@@ -482,7 +516,7 @@ const ProblemPage = () => {
 
                                                         {/* Space Complexity */}
                                                         <div className="bg-[#2A2A2A] rounded-lg p-4 border border-[#444]">
-                                                            <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg> Space Complexity</h4>
+                                                            <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2"><LuDatabase className="w-4 h-4" /> Space Complexity</h4>
                                                             <div className="space-y-2 text-sm">
                                                                 <div className="flex justify-between"><span className="text-gray-500">Auxiliary</span> <span className="font-mono text-purple-400">{analysis.spaceComplexity?.auxiliary || "?"}</span></div>
                                                                 <div className="flex justify-between"><span className="text-gray-500">Total</span> <span className="font-mono text-gray-300">{analysis.spaceComplexity?.total || "?"}</span></div>
@@ -517,10 +551,10 @@ const ProblemPage = () => {
                                                             <h4 className="text-xs font-bold text-gray-400 uppercase mb-3">Edge Cases</h4>
                                                             <div className="space-y-2 text-xs">
                                                                 {analysis.edgeCases?.covered?.map((ec, i) => (
-                                                                    <div key={i} className="flex items-start gap-2 text-gray-300"><span className="text-emerald-500">✓</span> {ec}</div>
+                                                                    <div key={i} className="flex items-start gap-2 text-gray-300"><LuCircleCheck size={14} className="text-emerald-500 mt-1 shrink-0" /> {ec}</div>
                                                                 ))}
                                                                 {analysis.edgeCases?.missing?.map((ec, i) => (
-                                                                    <div key={i} className="flex items-start gap-2 text-gray-400"><span className="text-red-500">✗</span> {ec} <span className="text-[10px] bg-red-500/10 text-red-400 px-1 rounded ml-auto">Missing</span></div>
+                                                                    <div key={i} className="flex items-start gap-2 text-gray-400"><LuCircleX size={14} className="text-red-500 mt-1 shrink-0" /> {ec} <span className="text-[10px] bg-red-500/10 text-red-400 px-1 rounded ml-auto">Missing</span></div>
                                                                 ))}
                                                             </div>
                                                         </div>
@@ -533,7 +567,7 @@ const ProblemPage = () => {
                                                             <ul className="space-y-3">
                                                                 {analysis.suggestions.map((suggestion, idx) => (
                                                                     <li key={idx} className="flex gap-3">
-                                                                        <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-yellow-500 shrink-0"></div>
+                                                                        <LuLightbulb size={14} className="text-yellow-500 mt-0.5 shrink-0" />
                                                                         <div>
                                                                             <div className="text-xs font-bold text-gray-200 mb-0.5">{suggestion.title}</div>
                                                                             <div className="text-xs text-gray-400 leading-snug">{suggestion.advice}</div>
@@ -558,23 +592,33 @@ const ProblemPage = () => {
                                 <div className="flex justify-between items-start gap-4 mb-2">
                                     <h1 className="text-2xl font-semibold text-white">{question.title}</h1>
 
-                                    {question.friendsSolved?.count > 0 && (
+                                    {question.friendsSolved && question.friendsSolved.count > 0 && (
                                         <div className="flex items-center gap-2 mt-1">
+                                            {/* Avatars (Friends first, then others, max 3) */}
                                             <div className="flex -space-x-1.5">
-                                                {[...Array(Math.min(3, question.friendsSolved.count))].map((_, i) => (
-                                                    <div key={i} className="w-5 h-5 rounded-full bg-indigo-500 border border-[#1A1A1A] flex items-center justify-center text-[8px] text-white font-bold">
-                                                        {(question.friendsSolved.names[i] || '?').charAt(0)}
+                                                {question.friendsSolved.names.slice(0, 3).map((name, i) => (
+                                                    <div key={i} className={`w-5 h-5 rounded-full border border-[#1A1A1A] flex items-center justify-center text-[8px] font-bold text-white ${i < question.friendsSolved.friendsCount ? 'bg-indigo-500' : 'bg-gray-600'}`} title={name}>
+                                                        {name.charAt(0)}
                                                     </div>
                                                 ))}
                                             </div>
+
+                                            {/* Text Description */}
                                             <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                                                <span className="text-white font-bold uppercase">
-                                                    {question.friendsSolved.names[0] ? (question.friendsSolved.names[0].split(' ')[1] || question.friendsSolved.names[0].split(' ')[0]) : ''}
-                                                </span>
-                                                {question.friendsSolved.count > 1 ? (
-                                                    <span> and <span className="text-white font-medium">{question.friendsSolved.count - 1} people already solved this</span></span>
+                                                {question.friendsSolved.firstFriendName ? (
+                                                    <>
+                                                        <span className="text-white font-bold uppercase">
+                                                            {question.friendsSolved.firstFriendName.split(' ')[1] || question.friendsSolved.firstFriendName.split(' ')[0]}
+                                                        </span>
+                                                        {question.friendsSolved.count > 1 ? (
+                                                            <span>and <span className="text-white font-medium">{question.friendsSolved.count - 1} others</span> solved this</span>
+                                                        ) : (
+                                                            <span>solved this</span>
+                                                        )}
+                                                    </>
                                                 ) : (
-                                                    <span> solved this</span>
+                                                    // No friends solved, but others did
+                                                    <span><span className="text-white font-medium">{question.friendsSolved.count} users</span> solved this</span>
                                                 )}
                                             </span>
                                         </div>
@@ -627,14 +671,46 @@ const ProblemPage = () => {
                                             </ul>
                                         </div>
                                     )}
+
+                                    {/* Live Solved By Ticker - Pinned to Bottom */}
+
                                 </div>
                             </div>
                         )}
                     </div>
+
+
+                    {/* Live Solved By Ticker - Absolute Bottom Right (Left Panel) - Minimal */}
+                    {question.friendsSolved?.recentSolvers?.length > 0 && (
+                        <div className="absolute bottom-6 right-6 z-20 pointer-events-none">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={currentSolverIndex}
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                    transition={{ duration: 0.4, ease: "easeOut" }}
+                                    className="flex items-center gap-3 pointer-events-auto"
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg shrink-0">
+                                        {question.friendsSolved.recentSolvers[currentSolverIndex].name.charAt(0)}
+                                    </div>
+                                    <div className="flex flex-col leading-tight">
+                                        <span className="text-sm font-semibold text-white drop-shadow-md">
+                                            {question.friendsSolved.recentSolvers[currentSolverIndex].name}
+                                        </span>
+                                        <span className="text-[11px] text-gray-300 drop-shadow-md">
+                                            solved <span className="text-emerald-400 font-medium">{formatTimeAgo(question.friendsSolved.recentSolvers[currentSolverIndex].time)}</span>
+                                        </span>
+                                    </div>
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Panel: Code & Results */}
-                <div className="lg:w-1/2 w-full h-1/2 lg:h-full flex flex-col">
+                <div className="lg:w-1/2 w-full h-1/2 lg:h-full flex flex-col relative">
                     {/* Top: Code Editor */}
                     <div className="h-[60%] flex flex-col bg-[#1E1E1E] border-b border-[#282828]">
                         {/* Editor Toolbar */}
@@ -920,10 +996,11 @@ const ProblemPage = () => {
                             )}
                         </div>
                     </div>
+
                 </div>
+                {/* Status bar removed as buttons are now in top toolbar */}
             </div>
-            {/* Status bar removed as buttons are now in top toolbar */}
-        </div >
+        </div>
     );
 };
 

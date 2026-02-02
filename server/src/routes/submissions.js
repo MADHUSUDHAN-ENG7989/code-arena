@@ -101,6 +101,24 @@ router.post('/submit', authMiddleware, async (req, res) => {
             : undefined;
 
         // Create or Update submission (Upsert) - User requested to replace old code
+
+        // Create or Update submission (Upsert) - User requested to replace old code
+        // IF MODE IS 'ARENA', SKIP DB SAVE
+        if (req.body.mode === 'arena') {
+            return res.json({
+                submission: {
+                    verdict,
+                    passedTestCases: result.passed,
+                    totalTestCases: result.total,
+                    runtime: avgRuntime,
+                    memory: avgMemory,
+                    language,
+                    code, // Return code so frontend has reference if needed
+                },
+                result,
+            });
+        }
+
         const submission = await Submission.findOneAndUpdate(
             { userId: req.userId, questionId },
             {
@@ -138,7 +156,6 @@ router.post('/submit', authMiddleware, async (req, res) => {
                 };
                 user.score += points[question.difficulty] || 10;
 
-                await user.save();
                 await user.save();
             }
         }

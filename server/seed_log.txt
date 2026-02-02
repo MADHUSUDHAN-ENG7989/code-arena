@@ -1,5 +1,0 @@
-[dotenv@17.2.3] injecting env (7) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
-Connected to MongoDB
-Error seeding database: ReferenceError: Notification is not defined
-    at seedDatabase (C:\Users\user\OneDrive\Desktop\devpro\server\seed.js:363:9)
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)

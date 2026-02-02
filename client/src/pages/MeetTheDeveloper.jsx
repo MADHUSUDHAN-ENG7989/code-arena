@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import MainLayout from '../components/MainLayout';
-import { FaLinkedin, FaInstagram, FaCode, FaServer, FaDatabase, FaBolt } from 'react-icons/fa';
+import { LuLinkedin, LuInstagram, LuCode, LuServer, LuDatabase, LuZap } from 'react-icons/lu';
 
 const MeetTheDeveloper = () => {
     return (
@@ -40,10 +40,10 @@ const MeetTheDeveloper = () => {
 
                             <div className="flex gap-4">
                                 <a href="https://www.linkedin.com/in/madhusudhanchilumula" target="_blank" rel="noopener noreferrer" className="p-3 rounded-xl bg-gray-800 text-gray-400 hover:text-blue-400 hover:bg-gray-700 transition-colors">
-                                    <FaLinkedin size={24} />
+                                    <LuLinkedin size={24} />
                                 </a>
                                 <a href="https://www.instagram.com/madhusudhan___o?igsh=OHV1eTZ6dG1tMHJq" target="_blank" rel="noopener noreferrer" className="p-3 rounded-xl bg-gray-800 text-gray-400 hover:text-pink-400 hover:bg-gray-700 transition-colors">
-                                    <FaInstagram size={24} />
+                                    <LuInstagram size={24} />
                                 </a>
                             </div>
                         </div>
@@ -64,10 +64,10 @@ const MeetTheDeveloper = () => {
                 <div>
                     <h2 className="text-2xl font-bold text-white mb-8 text-center">Powering the Platform</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <TechCard icon={<FaCode />} title="Frontend" desc="React + Tailwind" color="text-cyan-400" />
-                        <TechCard icon={<FaServer />} title="Backend" desc="Node.js + Express" color="text-green-400" />
-                        <TechCard icon={<FaDatabase />} title="Database" desc="MongoDB" color="text-emerald-400" />
-                        <TechCard icon={<FaBolt />} title="Realtime" desc="Socket.io" color="text-yellow-400" />
+                        <TechCard icon={<LuCode />} title="Frontend" desc="React + Tailwind" color="text-cyan-400" />
+                        <TechCard icon={<LuServer />} title="Backend" desc="Node.js + Express" color="text-green-400" />
+                        <TechCard icon={<LuDatabase />} title="Database" desc="MongoDB" color="text-emerald-400" />
+                        <TechCard icon={<LuZap />} title="Realtime" desc="Socket.io" color="text-yellow-400" />
                     </div>
                 </div>
 

@@ -1,9 +1,7 @@
 const express = require('express');
 const User = require('../models/User');
 const router = express.Router();
-const questionsData = require('../../new_questions');
-const questions20 = require('../../questions_20');
-const questions12 = require('../../questions_12');
+
 const Question = require('../models/Question');
 const mongoose = require('mongoose');
 

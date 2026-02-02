@@ -126,4 +126,15 @@ const startServer = async () => {
     }
 };
 
+
+process.on('uncaughtException', (err) => {
+    console.error('UNCAUGHT EXCEPTION:', err);
+    // keep running or exit? usually exit is safer, but let's log first
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('UNHANDLED REJECTION:', reason);
+});
+
 startServer();
+

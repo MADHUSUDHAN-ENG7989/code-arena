@@ -81,37 +81,26 @@ const initSocket = (server) => {
                 return;
             }
 
-            // Notify Host
-            io.to(room.hostId).emit('join_request', { user });
-            socket.emit('waiting_for_approval');
-        });
+            // Direct Join - No approval needed
+            room.users.push(user);
+            socket.join(roomId);
 
-        socket.on('respond_join_request', ({ roomId, user, approved }) => {
-            const room = rooms.get(roomId);
-            if (room) {
-                if (approved) {
-                    room.users.push(user);
-
-                    io.to(user._id).emit('join_success', {
-                        roomId,
-                        roomState: {
-                            users: room.users,
-                            hostId: room.hostId,
-                            question: room.question,
-                            code: room.code,
-                            timer: {
-                                isRunning: !!room.timerInterval,
-                                timeLeft: room.timeLeft || 0,
-                                duration: room.duration || 0
-                            }
-                        }
-                    });
-
-                    socket.to(roomId).emit('user_joined', user);
-                } else {
-                    io.to(user._id).emit('join_rejected');
+            socket.emit('join_success', {
+                roomId,
+                roomState: {
+                    users: room.users,
+                    hostId: room.hostId,
+                    question: room.question,
+                    code: room.code,
+                    timer: {
+                        isRunning: !!room.timerInterval,
+                        timeLeft: room.timeLeft || 0,
+                        duration: room.duration || 0
+                    }
                 }
-            }
+            });
+            socket.to(roomId).emit('user_joined', user);
+
         });
 
         socket.on('finalize_join', ({ roomId }) => {
@@ -172,6 +161,9 @@ const initSocket = (server) => {
                     existing.passed = passed;
                     existing.total = total;
                     existing.lastSubmitTime = new Date();
+                    if (passed === total && !existing.completionTime) {
+                        existing.completionTime = new Date();
+                    }
                 } else {
                     room.leaderboard.push({
                         userId,
