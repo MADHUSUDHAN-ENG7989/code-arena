@@ -79,6 +79,7 @@ const lines = input.replace(/\\\\n/g, '\\n').split('\\n');
     } else if (language === 'python') {
         const imports = `
 import sys
+import json
 from typing import List, Optional, Dict, Set, Tuple
 
 
@@ -112,10 +113,19 @@ while len(lines) < required_args:
             if (arg.type === 'int') {
                 parsing += `try:\n    ${arg.name} = int(${lineRef})\nexcept: ${arg.name} = 0\n`;
             } else if (arg.type === 'int[]') {
-                parsing += `${arg.name} = list(map(int, ${lineRef}.split()))\n`;
+                parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\nexcept:\n    ${arg.name} = list(map(int, ${lineRef}.split()))\n`;
             } else if (arg.type === 'string') {
                 parsing += `${arg.name} = ${lineRef}\n`;
+            } else if (arg.type === 'char[]') {
+                parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\nexcept:\n    ${arg.name} = ${lineRef}.split()\n`;
+            } else if (arg.type === 'string[]') {
+                parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\nexcept:\n    ${arg.name} = ${lineRef}.split()\n`;
+            } else if (arg.type === 'int[][]') {
+                parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\nexcept Exception as e:\n    print(f"DEBUG_JSON_FAIL: {${lineRef}}")\n    raise e\n`;
+            } else if (arg.type === 'char[][]') {
+                parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\nexcept Exception as e:\n    print(f"DEBUG_JSON_FAIL: {${lineRef}}")\n    raise e\n`;
             } else if (arg.type === 'ListNode') {
+
                 parsing += `${arg.name}_arr = list(map(int, ${lineRef}.split()))\n`;
                 parsing += `${arg.name} = create_linked_list(${arg.name}_arr)\n`;
             } else if (arg.type === 'TreeNode') {
@@ -127,12 +137,21 @@ while len(lines) < required_args:
 
         // Instantiate Solution class and call method
         // Starter codes now include Solution class directly
-        const fnName = config.fn;
+
+        // Fix: Python usage convention is snake_case, but config is camelCase. 
+        // We must convert config.fn to snake_case to match the starter code.
+        const fnName = config.fn.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
         let execution = `sol = Solution()\nresult = sol.${fnName}(${argNames.join(', ')})\n`;
         let output = '';
         if (config.returnType === 'int[]') {
             if (config.sortResult) execution += `if isinstance(result, list): result.sort()\n`;
             output = `print(" ".join(map(str, result)) if isinstance(result, list) else result)\n`;
+        } else if (config.returnType === 'char[]' || config.returnType === 'string[]') {
+            output = `print(" ".join(result) if result else "")\n`;
+        } else if (config.returnType === 'int[][]' || config.returnType === 'char[][]') {
+            output = `print(json.dumps(result).replace(" ", ""))\n`;
+        } else if (config.returnType === 'void') {
+            output = `print(json.dumps(${argNames[0]}).replace(" ", "")) if isinstance(${argNames[0]}, list) and len(${argNames[0]}) > 0 and isinstance(${argNames[0]}[0], list) else print(" ".join(map(str, ${argNames[0]})) if isinstance(${argNames[0]}, list) else ${argNames[0]})\n`;
         } else if (config.returnType === 'ListNode') {
             output = `print_linked_list(result)\n`;
         } else if (config.returnType === 'boolean') {
