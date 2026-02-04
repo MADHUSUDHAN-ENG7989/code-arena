@@ -68,7 +68,8 @@ function createQuestion(title, slug, difficulty, topic, description, constraints
     return {
         title, slug, description, difficulty, topic, constraints, examples,
         testCases: testCases.map((tc, i) => ({ ...tc, isHidden: i >= 3 })),
-        starterCode, hints
+        starterCode, hints,
+        meta: { args, returnType }
     };
 }
 
@@ -239,7 +240,7 @@ const newQuestions = [
         'Given an `m x n` integer matrix `matrix`, if an element is `0`, set its entire row and column to `0`\'s.You must do it in -place.',
         ['m == matrix.length', 'n == matrix[0].length'],
         [{ input: 'matrix = [[1,1,1],[1,0,1],[1,1,1]]', output: '[[1,0,1],[0,0,0],[1,0,1]]', explanation: '' }],
-        [{ input: '1 1 1\\n1 0 1\\n1 1 1', output: '1 0 1\\n0 0 0\\n1 0 1' }],
+        [{ input: '[[1,1,1],[1,0,1],[1,1,1]]', output: '[[1,0,1],[0,0,0],[1,0,1]]' }, { input: '[[0,1,2,0],[3,4,5,2],[1,3,1,5]]', output: '[[0,0,0,0],[0,4,5,0],[0,3,1,0]]' }],
         'setZeroes', [{ type: 'int[][]', name: 'matrix' }], 'void', ['Use first row/col as markers']),
 
     // 32. Spiral Matrix
@@ -247,7 +248,7 @@ const newQuestions = [
         'Given an `m x n` matrix, return all elements of the matrix in spiral order.',
         ['m == matrix.length', 'n == matrix[i].length'],
         [{ input: 'matrix = [[1,2,3],[4,5,6],[7,8,9]]', output: '[1,2,3,6,9,8,7,4,5]', explanation: '' }],
-        [{ input: '1 2 3\\n4 5 6\\n7 8 9', output: '1 2 3 6 9 8 7 4 5' }],
+        [{ input: '[[1,2,3],[4,5,6],[7,8,9]]', output: '1 2 3 6 9 8 7 4 5' }],
         'spiralOrder', [{ type: 'int[][]', name: 'matrix' }], 'int[]', ['Simulation with boundaries']),
 
     // 33. Rotate Image
@@ -255,7 +256,7 @@ const newQuestions = [
         'You are given an `n x n` 2D matrix representing an image, rotate the image by 90 degrees (clockwise). You have to rotate the image in-place, which means you have to modify the input 2D matrix directly.',
         ['n == matrix.length', 'n == matrix[i].length'],
         [{ input: 'matrix = [[1,2,3],[4,5,6],[7,8,9]]', output: '[[7,4,1],[8,5,2],[9,6,3]]', explanation: '' }],
-        [{ input: '1 2 3\\n4 5 6\\n7 8 9', output: '7 4 1\\n8 5 2\\n9 6 3' }],
+        [{ input: '[[1,2,3],[4,5,6],[7,8,9]]', output: '[[7,4,1],[8,5,2],[9,6,3]]' }],
         'rotate', [{ type: 'int[][]', name: 'matrix' }], 'void', ['Transpose then reverse rows']),
 
     // 34. Subarray Sum Equals K
@@ -271,7 +272,7 @@ const newQuestions = [
         'Given two strings `s` and `t` of lengths `m` and `n` respectively, return the minimum window substring of `s` such that every character in `t` (including duplicates) is included in the window. If there is no such substring, return the empty string "".',
         ['m == s.length', 'n == t.length'],
         [{ input: 's = "ADOBECODEBANC", t = "ABC"', output: '"BANC"', explanation: '' }],
-        [{ input: 'ADOBECODEBANC ABC', output: 'BANC' }, { input: 'a a', output: 'a' }, { input: 'a aa', output: '' }],
+        [{ input: 'ADOBECODEBANC\\nABC', output: 'BANC' }, { input: 'a\\na', output: 'a' }, { input: 'a\\naa', output: '' }],
         'minWindow', [{ type: 'string', name: 's' }, { type: 'string', name: 't' }], 'string', ['Sliding window', 'Character count map']),
 
     // 36. Encode and Decode Strings
@@ -287,7 +288,7 @@ const newQuestions = [
         'Given an `m x n` grid of characters `board` and a string `word`, return `true` if `word` exists in the grid. The word can be constructed from letters of sequentially adjacent cells, where adjacent cells are horizontally or vertically neighboring. The same letter cell may not be used more than once.',
         ['m == board.length'],
         [{ input: 'board = [["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]], word = "ABCCED"', output: 'true', explanation: '' }],
-        [{ input: 'A B C E\\nS F C S\\nA D E E\\nABCCED', output: 'true' }, { input: 'A B C E\\nS F C S\\nA D E E\\nSEE', output: 'true' }, { input: 'A B C E\\nS F C S\\nA D E E\\nABCB', output: 'false' }],
+        [{ input: '[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]]\\nABCCED', output: 'true' }, { input: '[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]]\\nSEE', output: 'true' }, { input: '[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]]\\nABCB', output: 'false' }],
         'exist', [{ type: 'char[][]', name: 'board' }, { type: 'string', name: 'word' }], 'boolean', ['DFS', 'Backtracking']),
 
     // 38. Increasing Triplet Subsequence
@@ -399,7 +400,7 @@ const newQuestions = [
         'Given two strings `word1` and `word2`, return the minimum number of operations required to convert `word1` to `word2`.',
         ['0 <= word1.length, word2.length <= 500'],
         [{ input: 'word1 = "horse", word2 = "ros"', output: '3', explanation: 'horse -> rorse (replace "h" with "r") -> rose (remove "r") -> ros (remove "e")' }],
-        [{ input: 'horse ros', output: '3' }, { input: 'intention execution', output: '5' }],
+        [{ input: 'horse\\nros', output: '3' }, { input: 'intention\\nexecution', output: '5' }],
         'minDistance', [{ type: 'string', name: 'word1' }, { type: 'string', name: 'word2' }], 'int', ['DP']),
 
     // 52. Merge Intervals
@@ -407,7 +408,7 @@ const newQuestions = [
         'Given an array of intervals where intervals[i] = [starti, endi], merge all overlapping intervals, and return an array of the non-overlapping intervals that cover all the intervals in the input.',
         ['1 <= intervals.length <= 10^4'],
         [{ input: 'intervals = [[1,3],[2,6],[8,10],[15,18]]', output: '[[1,6],[8,10],[15,18]]', explanation: '' }],
-        [{ input: '1 3 2 6 8 10 15 18', output: '1 6 8 10 15 18' }, { input: '1 4 4 5', output: '1 5' }],
+        [{ input: '[[1,3],[2,6],[8,10],[15,18]]', output: '1 6 8 10 15 18' }, { input: '[[1,4],[4,5]]', output: '1 5' }],
         'merge', [{ type: 'int[][]', name: 'intervals' }], 'int[][]', ['Sort by start time']),
 
     // 53. Find Peak Element

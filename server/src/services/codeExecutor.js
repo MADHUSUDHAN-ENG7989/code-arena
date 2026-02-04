@@ -48,6 +48,12 @@ const lines = input.replace(/\\\\n/g, '\\n').split('\\n');
                 parsing += `const ${arg.name} = ${lineRef}.trim().split(/\\s+/).map(Number);\n`;
             } else if (arg.type === 'string') {
                 parsing += `const ${arg.name} = ${lineRef}.trim();\n`;
+            } else if (arg.type === 'string[]') {
+                parsing += `let ${arg.name}; try { ${arg.name} = JSON.parse(${lineRef}); } catch(e) { ${arg.name} = ${lineRef}.trim().split(/\\s+/); }\n`;
+            } else if (arg.type === 'int[][]') {
+                parsing += `const ${arg.name} = JSON.parse(${lineRef});\n`;
+            } else if (arg.type === 'char[][]') {
+                parsing += `const ${arg.name} = JSON.parse(${lineRef});\n`;
             } else if (arg.type === 'ListNode') {
                 parsing += `const ${arg.name}_arr = ${lineRef}.trim().split(/\\s+/).map(Number);\n`;
                 parsing += `const ${arg.name} = createLinkedList(${arg.name}_arr);\n`;
