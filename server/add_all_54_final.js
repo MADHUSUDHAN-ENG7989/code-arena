@@ -460,4 +460,4 @@ if (require.main === module) {
     seed();
 }
 
-module.exports = { allQuestions };
+module.exports = { allQuestions, seed };
