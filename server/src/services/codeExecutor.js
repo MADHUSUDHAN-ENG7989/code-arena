@@ -155,13 +155,13 @@ while len(lines) < required_args:
             if (arg.type === 'int') {
                 parsing += `try:\n    ${arg.name} = int(${lineRef})\nexcept: ${arg.name} = 0\n`;
             } else if (arg.type === 'int[]') {
-                parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\nexcept:\n    ${arg.name} = list(map(int, ${lineRef}.split()))\n`;
+                parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\n    if not isinstance(${arg.name}, list): raise ValueError\nexcept:\n    ${arg.name} = list(map(int, ${lineRef}.split()))\n`;
             } else if (arg.type === 'string') {
                 parsing += `${arg.name} = ${lineRef}\n`;
             } else if (arg.type === 'char[]') {
-                parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\nexcept:\n    ${arg.name} = ${lineRef}.split()\n`;
+                parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\n    if not isinstance(${arg.name}, list): raise ValueError\nexcept:\n    ${arg.name} = ${lineRef}.split()\n`;
             } else if (arg.type === 'string[]') {
-                parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\nexcept:\n    ${arg.name} = ${lineRef}.split()\n`;
+                parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\n    if not isinstance(${arg.name}, list): raise ValueError\nexcept:\n    ${arg.name} = ${lineRef}.split()\n`;
             } else if (arg.type === 'int[][]') {
                 parsing += `try:\n    ${arg.name} = json.loads(${lineRef})\nexcept Exception as e:\n    print(f"DEBUG_JSON_FAIL: {${lineRef}}")\n    raise e\n`;
             } else if (arg.type === 'char[][]') {
