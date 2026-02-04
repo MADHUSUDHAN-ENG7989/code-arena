@@ -164,8 +164,8 @@ const newQuestions = [
 
     // 22. Find Pivot Index
     createQuestion('Find Pivot Index', 'find-pivot-index', 'Easy', 'Array',
-        'Given an array of integers `nums`, calculate the pivot index of this array. The pivot index is the index where the sum of all the numbers strictly to the left of the index is equal to the sum of all the numbers strictly to the index\\'s right.',
-    ['1 <= nums.length <= 10^4'],
+        'Given an array of integers `nums`, calculate the pivot index of this array. The pivot index is the index where the sum of all the numbers strictly to the left of the index is equal to the sum of all the numbers strictly to the index\\\'s right.',
+        ['1 <= nums.length <= 10^4'],
         [{ input: 'nums = [1,7,3,6,5,6]', output: '3', explanation: 'Left sum = 1+7+3 = 11, Right sum = 5+6 = 11' }],
         [{ input: '1 7 3 6 5 6', output: '3' }, { input: '1 2 3', output: '-1' }, { input: '2 1 -1', output: '0' }],
         'pivotIndex', [{ type: 'int[]', name: 'nums' }], 'int', ['Prefix sums']),
@@ -356,19 +356,19 @@ const newQuestions = [
 
     // 46. Largest Rectangle in Histogram
     createQuestion('Largest Rectangle in Histogram', 'largest-rectangle-in-histogram', 'Hard', 'Array',
-        'Given an array of integers `heights` representing the histogram\\'s bar height where the width of each bar is`1`, return the area of the largest rectangle in the histogram.',
+        'Given an array of integers `heights` representing the histogram\'s bar height where the width of each bar is `1`, return the area of the largest rectangle in the histogram.',
         ['1 <= heights.length <= 10^5'],
-            [{ input: 'heights = [2,1,5,6,2,3]', output: '10', explanation: '' }, { input: 'heights = [2,4]', output: '4', explanation: '' }],
-            [{ input: '2 1 5 6 2 3', output: '10' }, { input: '2 4', output: '4' }],
-            'largestRectangleArea', [{ type: 'int[]', name: 'heights' }], 'int', ['Monotonic stack']),
+        [{ input: 'heights = [2,1,5,6,2,3]', output: '10', explanation: '' }, { input: 'heights = [2,4]', output: '4', explanation: '' }],
+        [{ input: '2 1 5 6 2 3', output: '10' }, { input: '2 4', output: '4' }],
+        'largestRectangleArea', [{ type: 'int[]', name: 'heights' }], 'int', ['Monotonic stack']),
 
-// 47. First Missing Positive
-createQuestion('First Missing Positive', 'first-missing-positive', 'Hard', 'Array',
-    'Given an unsorted integer array `nums`, return the smallest missing positive integer. You must implement an algorithm that runs in `O(n)` time and uses constant extra space.',
-    ['1 <= nums.length <= 10^5'],
-    [{ input: 'nums = [1,2,0]', output: '3', explanation: '' }, { input: 'nums = [3,4,-1,1]', output: '2', explanation: '' }],
-    [{ input: '1 2 0', output: '3' }, { input: '3 4 -1 1', output: '2' }, { input: '7 8 9 11 12', output: '1' }],
-    'firstMissingPositive', [{ type: 'int[]', name: 'nums' }], 'int', ['In-place swap to correct index']),
+    // 47. First Missing Positive
+    createQuestion('First Missing Positive', 'first-missing-positive', 'Hard', 'Array',
+        'Given an unsorted integer array `nums`, return the smallest missing positive integer. You must implement an algorithm that runs in `O(n)` time and uses constant extra space.',
+        ['1 <= nums.length <= 10^5'],
+        [{ input: 'nums = [1,2,0]', output: '3', explanation: '' }, { input: 'nums = [3,4,-1,1]', output: '2', explanation: '' }],
+        [{ input: '1 2 0', output: '3' }, { input: '3 4 -1 1', output: '2' }, { input: '7 8 9 11 12', output: '1' }],
+        'firstMissingPositive', [{ type: 'int[]', name: 'nums' }], 'int', ['In-place swap to correct index']),
 
     // 48. Text Justification
     createQuestion('Text Justification', 'text-justification', 'Hard', 'String',
