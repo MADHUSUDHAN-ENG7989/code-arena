@@ -435,11 +435,18 @@ async function seed() {
         await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/coding-platform');
         console.log('Connected to DB');
 
-        await Question.deleteMany({});
-        console.log('Cleared questions');
+        // await Question.deleteMany({});
+        // console.log('Cleared questions');
 
-        await Question.insertMany(allQuestions);
-        console.log(`Successfully added ${allQuestions.length} questions`);
+        console.log('Upserting questions to preserve User history...');
+        for (const q of allQuestions) {
+            await Question.findOneAndUpdate(
+                { slug: q.slug },
+                q,
+                { upsert: true, new: true }
+            );
+        }
+        console.log(`Successfully processed ${allQuestions.length} questions`);
 
         process.exit(0);
     } catch (e) {
