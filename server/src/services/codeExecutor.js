@@ -15,7 +15,39 @@ const LANGUAGE_IDS = {
     php: 68,
 };
 
-// ... (Keep existing Helper Definitions like JS_LIST_NODE, etc.) ...
+const transformInputForStrictLanguages = (input, args) => {
+    const lines = input.split('\n');
+    return lines.map((line, i) => {
+        const trimmed = line.trim();
+        const arg = args[i];
+        if (!arg) return trimmed; // Extra lines?
+
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) {
+                    // Check if 2D array based on Arg Type or Content consistency
+                    const is2D = Array.isArray(parsed[0]) || arg.type.includes('[][]');
+
+                    if (is2D) {
+                        // R C data...
+                        const rows = parsed.length;
+                        const cols = rows > 0 ? parsed[0].length : 0;
+                        const flatten = (arr) => arr.reduce((acc, val) =>
+                            Array.isArray(val) ? acc.concat(flatten(val)) : acc.concat(val), []);
+                        return `${rows} ${cols} ` + flatten(parsed).join(' ');
+                    } else {
+                        // 1D Array
+                        return parsed.join(' ');
+                    }
+                }
+            } catch (e) {
+                return trimmed;
+            }
+        }
+        return trimmed;
+    }).join('\n');
+};
 
 const generateDriver = (code, language, slug) => {
     const config = PROBLEM_CONFIG[slug];
@@ -71,10 +103,14 @@ const lines = input.replace(/\\\\n/g, '\\n').split('\\n');
         if (config.returnType === 'int[]') {
             if (config.sortResult) execution += `if(Array.isArray(result)) result.sort((a, b) => a - b);\n`;
             output = `console.log(Array.isArray(result) ? result.join(' ') : result);\n`;
+        } else if (config.returnType === 'int[][]' || config.returnType === 'string[]' || config.returnType === 'char[][]') {
+            output = `console.log(JSON.stringify(result));\n`;
         } else if (config.returnType === 'ListNode') {
             output = `printLinkedList(result);\n`;
         } else if (config.returnType === 'boolean') {
             output = `console.log(result);\n`;
+        } else if (config.returnType === 'void') {
+            output = `console.log(JSON.stringify(${argNames[0]}));\n`;
         } else {
             // int, string, etc.
             output = `console.log(result);\n`;
@@ -221,6 +257,20 @@ class Main {
                 parsing += `ListNode ${arg.name} = LinkedListHelper.create(${lineRef});\n`;
             } else if (arg.type === 'TreeNode') {
                 parsing += `TreeNode ${arg.name} = TreeHelper.create(${lineRef});\n`;
+            } else if (arg.type === 'int[][]') {
+                parsing += `String[] ${arg.name}_parts = ${lineRef}.split("\\\\s+");\n`;
+                parsing += `int ${arg.name}_rows = Integer.parseInt(${arg.name}_parts[0]);\n`;
+                parsing += `int ${arg.name}_cols = Integer.parseInt(${arg.name}_parts[1]);\n`;
+                parsing += `int[][] ${arg.name} = new int[${arg.name}_rows][${arg.name}_cols];\n`;
+                parsing += `int ${arg.name}_idx = 2;\n`;
+                parsing += `for(int r=0; r<${arg.name}_rows; r++) for(int c=0; c<${arg.name}_cols; c++) ${arg.name}[r][c] = Integer.parseInt(${arg.name}_parts[${arg.name}_idx++]);\n`;
+            } else if (arg.type === 'char[][]') {
+                parsing += `String[] ${arg.name}_parts = ${lineRef}.split("\\\\s+");\n`;
+                parsing += `int ${arg.name}_rows = Integer.parseInt(${arg.name}_parts[0]);\n`;
+                parsing += `int ${arg.name}_cols = Integer.parseInt(${arg.name}_parts[1]);\n`;
+                parsing += `char[][] ${arg.name} = new char[${arg.name}_rows][${arg.name}_cols];\n`;
+                parsing += `int ${arg.name}_idx = 2;\n`;
+                parsing += `for(int r=0; r<${arg.name}_rows; r++) for(int c=0; c<${arg.name}_cols; c++) ${arg.name}[r][c] = ${arg.name}_parts[${arg.name}_idx++].charAt(0);\n`;
             }
         });
 
@@ -264,6 +314,13 @@ class Main {
         } else if (config.returnType === 'boolean') {
             execution = `boolean result = ${callFn};\n`;
             output = `System.out.println(String.valueOf(result).toLowerCase());\n`;
+        } else if (config.returnType === 'int[][]') {
+            execution = `int[][] result = ${callFn};\n`;
+            output = `for(int[] row : result) { for(int val : row) { System.out.print(val + " "); } }\n`;
+        } else if (config.returnType === 'void') {
+            execution = `${callFn};\n`;
+            // Assuming 1st arg is the one modified (matrix)
+            output = `for(int[] row : ${argNames[0]}) { for(int val : row) { System.out.print(val + " "); } }\n`;
         } else {
             execution = `${config.returnType} result = ${callFn};\n`;
             output = `System.out.println(result);\n`;
@@ -319,6 +376,14 @@ int main() {
             } else if (arg.type === 'TreeNode') {
                 parsing += `vector<string> ${arg.name}_arr; { stringstream ss_arg(${ref}); string val; while(ss_arg >> val) ${arg.name}_arr.push_back(val); }\n`;
                 parsing += `TreeNode* ${arg.name} = createBinaryTree(${arg.name}_arr);\n`;
+            } else if (arg.type === 'int[][]') {
+                parsing += `int ${arg.name}_r, ${arg.name}_c; stringstream ss_${arg.name}(${ref}); ss_${arg.name} >> ${arg.name}_r >> ${arg.name}_c;\n`;
+                parsing += `vector<vector<int>> ${arg.name}(${arg.name}_r, vector<int>(${arg.name}_c));\n`;
+                parsing += `for(int r=0; r<${arg.name}_r; ++r) for(int c=0; c<${arg.name}_c; ++c) ss_${arg.name} >> ${arg.name}[r][c];\n`;
+            } else if (arg.type === 'char[][]') {
+                parsing += `int ${arg.name}_r, ${arg.name}_c; stringstream ss_${arg.name}(${ref}); ss_${arg.name} >> ${arg.name}_r >> ${arg.name}_c;\n`;
+                parsing += `vector<vector<char>> ${arg.name}(${arg.name}_r, vector<char>(${arg.name}_c));\n`;
+                parsing += `for(int r=0; r<${arg.name}_r; ++r) for(int c=0; c<${arg.name}_c; ++c) ss_${arg.name} >> ${arg.name}[r][c];\n`;
             }
         });
 
@@ -337,6 +402,12 @@ int main() {
         } else if (config.returnType === 'boolean') {
             execution = `bool result = ${call};\n`;
             output = `cout << (result ? "true" : "false") << endl;\n`;
+        } else if (config.returnType === 'int[][]') {
+            execution = `vector<vector<int>> result = ${call};\n`;
+            output = `for(const auto& row : result) for(int val : row) cout << val << " "; cout << endl;\n`;
+        } else if (config.returnType === 'void') {
+            execution = `${call};\n`;
+            output = `for(const auto& row : ${argNames[0]}) for(int val : row) cout << val << " "; cout << endl;\n`;
         } else {
             // int
             execution = `auto result = ${call};\n`;
@@ -386,6 +457,15 @@ int main() {
             } else if (arg.type === 'TreeNode') {
                 parsing += `char* ${arg.name}Parts[1000]; int ${arg.name}Size = 0; char* t${i} = strtok(lines[${i}], " "); while(t${i}) { ${arg.name}Parts[${arg.name}Size++] = t${i}; t${i} = strtok(NULL, " "); }\n`;
                 parsing += `struct TreeNode* ${arg.name} = createBinaryTree(${arg.name}Parts, ${arg.name}Size);\n`;
+            } else if (arg.type === 'int[][]') {
+                // Format: R C val val ...
+                // Note: strtok is stateful, but usually okay if sequential.
+                parsing += `char* t${i} = strtok(lines[${i}], " ");\n`;
+                parsing += `int ${arg.name}Size = atoi(t${i}); t${i} = strtok(NULL, " ");\n`;
+                parsing += `int ${arg.name}TmpC = atoi(t${i}); t${i} = strtok(NULL, " ");\n`;
+                parsing += `int** ${arg.name} = (int**)malloc(${arg.name}Size * sizeof(int*));\n`;
+                parsing += `int* ${arg.name}ColSize = (int*)malloc(${arg.name}Size * sizeof(int));\n`;
+                parsing += `for(int r=0; r<${arg.name}Size; r++) { ${arg.name}[r] = (int*)malloc(${arg.name}TmpC * sizeof(int)); ${arg.name}ColSize[r] = ${arg.name}TmpC; for(int c=0; c<${arg.name}TmpC; c++) { ${arg.name}[r][c] = atoi(t${i}); t${i} = strtok(NULL, " "); } }\n`;
             }
         });
 
@@ -798,11 +878,17 @@ const executeCode = async (code, language, input, slug) => {
         }
 
 
-        // Default to Piston for now (Judge0 logic removed/commented to focus on Piston fix)
-        // You can re-enable Judge0 logic here if you have a key, 
-        // but remember to apply the same driver injection logic.
+        // Default to Piston for now
+        // Transform input for strictly typed languages that expect space-separated values
+        let finalInput = input;
+        if (['java', 'cpp', 'c'].includes(language)) {
+            const config = PROBLEM_CONFIG[slug];
+            if (config) {
+                finalInput = transformInputForStrictLanguages(input, config.args);
+            }
+        }
 
-        return await executeWithPiston(finalCode, language, input);
+        return await executeWithPiston(finalCode, language, finalInput);
 
     } catch (error) {
         console.error('Code execution error:', error);
