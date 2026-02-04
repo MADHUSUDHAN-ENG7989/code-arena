@@ -38,6 +38,14 @@ router.get('/daily', authMiddleware, async (req, res) => {
         }
 
         const user = await User.findById(req.userId);
+
+        // Ensure questionId is populated and not null
+        if (!challenge.questionId) {
+            // If the question was deleted but challenge exists, we should probably delete this invalid challenge
+            // await DailyChallenge.findByIdAndDelete(challenge._id); // Optional: Self-healing
+            return res.json({ message: 'Challenge question not found' });
+        }
+
         const isSolved = user?.solvedQuestions.includes(challenge.questionId._id) || false;
 
         res.json({
