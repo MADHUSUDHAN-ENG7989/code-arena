@@ -32,6 +32,27 @@ const Login = () => {
         }
     };
 
+    const handleDemoLogin = async (demoRoll, demoPass) => {
+        // Auto-fill and auto-submit
+        setRollNumber(demoRoll);
+        setPassword(demoPass);
+        setError('');
+        setLoading(true);
+
+        try {
+            const user = await login({ rollNumber: demoRoll, password: demoPass });
+            if (user.isFirstLogin) {
+                navigate('/change-password');
+            } else {
+                navigate('/');
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Demo login failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#0B1120] relative overflow-hidden font-sans">
             {/* Background Effects */}
@@ -149,6 +170,35 @@ const Login = () => {
                             ) : 'Login'}
                         </button>
                     </form>
+
+                    <div className="mt-8 flex flex-col gap-3">
+                        <div className="flex items-center gap-4 text-xs text-gray-600">
+                            <div className="h-[1px] flex-1 bg-gray-800"></div>
+                            <span>OR DEMO ACCESS</span>
+                            <div className="h-[1px] flex-1 bg-gray-800"></div>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button
+                                type="button"
+                                onClick={() => handleDemoLogin('demo_student', 'student123')}
+                                disabled={loading}
+                                className="flex-1 py-3 px-4 bg-[#0B1120] border border-gray-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 text-gray-400 hover:text-indigo-400 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                Demo Student
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleDemoLogin('demo_admin', 'admin123')}
+                                disabled={loading}
+                                className="flex-1 py-3 px-4 bg-[#0B1120] border border-gray-800 hover:border-violet-500/50 hover:bg-violet-500/5 text-gray-400 hover:text-violet-400 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                                Demo Admin
+                            </button>
+                        </div>
+                    </div>
 
                     <div className="mt-6 text-center text-sm text-gray-500">
                         <p>First time login? You'll be asked to change your password.</p>
