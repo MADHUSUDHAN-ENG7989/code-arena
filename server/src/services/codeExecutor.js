@@ -945,9 +945,9 @@ const executeWithJudge0 = async (code, language, input) => {
         }
 
         const config = getJudge0Config();
-        if (!config.apiKey) {
-            console.error('[EXECUTOR] JUDGE0_API_KEY is not set in environment variables');
-            return { status: 'error', error: 'Code execution service is not configured. Please set JUDGE0_API_KEY.' };
+        if (!config.apiUrl) {
+            console.error('[EXECUTOR] JUDGE0_API_URL is not set in environment variables');
+            return { status: 'error', error: 'Code execution service is not configured.' };
         }
 
         // Base64 encode source code and stdin
@@ -960,15 +960,20 @@ const executeWithJudge0 = async (code, language, input) => {
             stdin,
         };
 
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        if (config.apiKey && config.apiUrl.includes('rapidapi.com')) {
+            headers['x-rapidapi-key'] = config.apiKey;
+            headers['x-rapidapi-host'] = config.apiHost || 'judge0-ce.p.rapidapi.com';
+        }
+
         const response = await axios.post(
             `${config.apiUrl}/submissions?base64_encoded=true&wait=true&fields=stdout,stderr,status,time,memory,compile_output`,
             payload,
             {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-rapidapi-key': config.apiKey,
-                    'x-rapidapi-host': config.apiHost,
-                },
+                headers,
                 timeout: 30000, // 30 second timeout
             }
         );
@@ -1063,13 +1068,13 @@ const executeCode = async (code, language, input, slug) => {
 
         // Fallback to Judge0 CE
         const judge0Config = getJudge0Config();
-        if (judge0Config.apiKey) {
+        if (judge0Config.apiUrl) {
             console.log('[EXECUTOR] Using Judge0 CE backend');
             return await executeWithJudge0(finalCode, language, finalInput);
         }
 
         // No backend configured
-        console.error('[EXECUTOR] No code execution backend configured! Set JDOODLE_CLIENT_ID/SECRET or JUDGE0_API_KEY');
+        console.error('[EXECUTOR] No code execution backend configured! Set JDOODLE_CLIENT_ID/SECRET or JUDGE0_API_URL');
         return {
             status: 'error',
             error: 'Code execution service is not configured. Please contact the administrator.'
