@@ -59,8 +59,8 @@ const generateDriver = (code, language, slug) => {
     if (language === 'javascript') {
         const imports = `
 const fs = require('fs');
-const input = fs.readFileSync(0, 'utf-8').trim();
-if (!input) return;
+const input = fs.readFileSync(0, 'utf-8').replace(/\r?\n$/, '');
+if (input === '') return;
 const lines = input.replace(/\\\\n/g, '\\n').split('\\n');
 `;
         // Helpers
@@ -126,7 +126,7 @@ from typing import List, Optional, Dict, Set, Tuple
 
 
 # Read input and handle potential formatting issues
-input_str = sys.stdin.read().strip()
+input_str = sys.stdin.read().rstrip('\r\n')
 if not input_str:
     sys.exit(0)
 
@@ -234,7 +234,7 @@ class Main {
         while ((line = reader.readLine()) != null) {
             inputBuilder.append(line).append("\\n");
         }
-        String input = inputBuilder.toString().trim();
+        String input = inputBuilder.toString().replaceAll("\\r?\\n$", "");
         if (input.isEmpty()) return;
         
         String[] lines = input.replace("\\\\n", "\\n").split("\\n");
@@ -505,6 +505,21 @@ const JDOODLE_CLIENT_SECRET = process.env.JDOODLE_CLIENT_SECRET || '';
 const JUDGE0_API_URL = process.env.JUDGE0_API_URL || 'https://judge0-ce.p.rapidapi.com';
 const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY || '';
 const JUDGE0_API_HOST = 'judge0-ce.p.rapidapi.com';
+
+const getJDoodleCredentials = () => {
+    return {
+        clientId: process.env.JDOODLE_CLIENT_ID || JDOODLE_CLIENT_ID,
+        clientSecret: process.env.JDOODLE_CLIENT_SECRET || JDOODLE_CLIENT_SECRET
+    };
+};
+
+const getJudge0Config = () => {
+    return {
+        apiUrl: process.env.JUDGE0_API_URL || JUDGE0_API_URL,
+        apiKey: process.env.JUDGE0_API_KEY || JUDGE0_API_KEY,
+        apiHost: process.env.JUDGE0_API_HOST || JUDGE0_API_HOST
+    };
+};
 
 // JDoodle language mapping: { language, versionIndex }
 const JDOODLE_RUNTIMES = {
@@ -839,13 +854,14 @@ const executeWithJDoodle = async (code, language, input) => {
             return { status: 'error', error: `Unsupported language for JDoodle: ${language}` };
         }
 
-        if (!JDOODLE_CLIENT_ID || !JDOODLE_CLIENT_SECRET) {
+        const creds = getJDoodleCredentials();
+        if (!creds.clientId || !creds.clientSecret) {
             return { status: 'error', error: 'JDoodle credentials not configured' };
         }
 
         const payload = {
-            clientId: JDOODLE_CLIENT_ID,
-            clientSecret: JDOODLE_CLIENT_SECRET,
+            clientId: creds.clientId,
+            clientSecret: creds.clientSecret,
             script: code,
             language: runtime.language,
             versionIndex: runtime.versionIndex,
@@ -928,7 +944,8 @@ const executeWithJudge0 = async (code, language, input) => {
             return { status: 'error', error: `Unsupported language: ${language}` };
         }
 
-        if (!JUDGE0_API_KEY) {
+        const config = getJudge0Config();
+        if (!config.apiKey) {
             console.error('[EXECUTOR] JUDGE0_API_KEY is not set in environment variables');
             return { status: 'error', error: 'Code execution service is not configured. Please set JUDGE0_API_KEY.' };
         }
@@ -944,13 +961,13 @@ const executeWithJudge0 = async (code, language, input) => {
         };
 
         const response = await axios.post(
-            `${JUDGE0_API_URL}/submissions?base64_encoded=true&wait=true&fields=stdout,stderr,status,time,memory,compile_output`,
+            `${config.apiUrl}/submissions?base64_encoded=true&wait=true&fields=stdout,stderr,status,time,memory,compile_output`,
             payload,
             {
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-rapidapi-key': JUDGE0_API_KEY,
-                    'x-rapidapi-host': JUDGE0_API_HOST,
+                    'x-rapidapi-key': config.apiKey,
+                    'x-rapidapi-host': config.apiHost,
                 },
                 timeout: 30000, // 30 second timeout
             }
@@ -1038,13 +1055,15 @@ const executeCode = async (code, language, input, slug) => {
         }
 
         // Try JDoodle first (free, no credit card required)
-        if (JDOODLE_CLIENT_ID && JDOODLE_CLIENT_SECRET) {
+        const jdoodleCreds = getJDoodleCredentials();
+        if (jdoodleCreds.clientId && jdoodleCreds.clientSecret) {
             console.log('[EXECUTOR] Using JDoodle backend');
             return await executeWithJDoodle(finalCode, language, finalInput);
         }
 
         // Fallback to Judge0 CE
-        if (JUDGE0_API_KEY) {
+        const judge0Config = getJudge0Config();
+        if (judge0Config.apiKey) {
             console.log('[EXECUTOR] Using Judge0 CE backend');
             return await executeWithJudge0(finalCode, language, finalInput);
         }
