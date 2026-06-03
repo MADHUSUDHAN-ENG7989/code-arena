@@ -495,14 +495,24 @@ int main() {
     return FINAL_CODE;
 };
 
-const PISTON_API_URL = 'https://emkc.org/api/v2/piston/execute';
+// Code Execution Backends
+// Primary: JDoodle (free, no credit card required)
+// Fallback: Judge0 CE via RapidAPI (needs credit card for API key)
+const JDOODLE_API_URL = 'https://api.jdoodle.com/v1/execute';
+const JDOODLE_CLIENT_ID = process.env.JDOODLE_CLIENT_ID || '';
+const JDOODLE_CLIENT_SECRET = process.env.JDOODLE_CLIENT_SECRET || '';
 
-const PISTON_RUNTIMES = {
-    javascript: { language: 'javascript', version: '18.15.0' },
-    python: { language: 'python', version: '3.10.0' },
-    java: { language: 'java', version: '15.0.2' },
-    cpp: { language: 'c++', version: '10.2.0' },
-    c: { language: 'c', version: '10.2.0' },
+const JUDGE0_API_URL = process.env.JUDGE0_API_URL || 'https://judge0-ce.p.rapidapi.com';
+const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY || '';
+const JUDGE0_API_HOST = 'judge0-ce.p.rapidapi.com';
+
+// JDoodle language mapping: { language, versionIndex }
+const JDOODLE_RUNTIMES = {
+    javascript: { language: 'nodejs', versionIndex: '4' },
+    python:     { language: 'python3', versionIndex: '4' },
+    java:       { language: 'java', versionIndex: '4' },
+    cpp:        { language: 'cpp17', versionIndex: '1' },
+    c:          { language: 'c', versionIndex: '5' },
 };
 
 // --- Helper Definitions ---
@@ -822,43 +832,183 @@ struct TreeNode* createBinaryTree(char** parts, int size) {
 
 
 
-const executeWithPiston = async (code, language, input) => {
+const executeWithJDoodle = async (code, language, input) => {
     try {
-        const runtime = PISTON_RUNTIMES[language.toLowerCase()];
+        const runtime = JDOODLE_RUNTIMES[language.toLowerCase()];
         if (!runtime) {
-            return { status: 'error', error: 'Unsupported language for Piston API' };
+            return { status: 'error', error: `Unsupported language for JDoodle: ${language}` };
+        }
+
+        if (!JDOODLE_CLIENT_ID || !JDOODLE_CLIENT_SECRET) {
+            return { status: 'error', error: 'JDoodle credentials not configured' };
         }
 
         const payload = {
+            clientId: JDOODLE_CLIENT_ID,
+            clientSecret: JDOODLE_CLIENT_SECRET,
+            script: code,
             language: runtime.language,
-            version: runtime.version,
-            files: [
-                {
-                    name: language === 'java' ? 'Main.java' : undefined,
-                    content: code
-                }
-            ],
-            stdin: input
+            versionIndex: runtime.versionIndex,
+            stdin: input || '',
         };
 
-        const response = await axios.post(PISTON_API_URL, payload);
+        const response = await axios.post(JDOODLE_API_URL, payload, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 30000,
+        });
 
-        const { run } = response.data;
-        const status = run.code === 0 ? 'Accepted' : 'Runtime Error (Other)';
+        const data = response.data;
+
+        // JDoodle response: { output, statusCode, memory, cpuTime }
+        // statusCode: 200 = success, 204 = no output, others = error
+        const outputStr = (data.output || '').trim();
+        let status = 'Accepted';
+        let error = '';
+
+        if (data.statusCode === 200 || data.statusCode === undefined) {
+            // Check if output contains error indicators
+            if (outputStr.includes('Compilation Error') || outputStr.includes('error:')) {
+                // JDoodle often puts compilation errors in stdout
+                if (outputStr.toLowerCase().includes('compilation') || 
+                    outputStr.toLowerCase().includes('cannot find symbol') ||
+                    outputStr.toLowerCase().includes('syntax error')) {
+                    status = 'Compilation Error';
+                    error = outputStr;
+                } else {
+                    // Could be a legitimate output containing the word "error"
+                    status = 'Accepted';
+                }
+            }
+        } else if (data.statusCode === 204) {
+            status = 'Accepted'; // No output but ran successfully
+        } else {
+            status = 'Runtime Error (Other)';
+            error = outputStr || `JDoodle error (status: ${data.statusCode})`;
+        }
+
+        // JDoodle sometimes returns error messages in output for runtime errors
+        // Detect common runtime error patterns
+        if (status === 'Accepted' && outputStr) {
+            const lowerOutput = outputStr.toLowerCase();
+            if (lowerOutput.includes('traceback (most recent call last)') ||
+                lowerOutput.includes('exception in thread') ||
+                lowerOutput.includes('segmentation fault') ||
+                lowerOutput.includes('runtime error') ||
+                lowerOutput.includes('typeerror:') ||
+                lowerOutput.includes('referenceerror:') ||
+                lowerOutput.includes('nameerror:')) {
+                status = 'Runtime Error (Other)';
+                error = outputStr;
+            }
+        }
 
         return {
-            status: run.stderr ? 'Runtime Error (Other)' : 'Accepted',
-            output: run.stdout ? run.stdout.trim() : '',
-            error: run.stderr,
-            // Piston doesn't return execution time, so we mock a realistic time (15-50ms)
-            time: Math.floor(Math.random() * 35) + 15, // in ms
-            memory: Math.floor(Math.random() * 5000) + 10240, // Mock memory 10-15MB
+            status,
+            output: status === 'Accepted' ? outputStr : '',
+            error: error || undefined,
+            time: data.cpuTime ? parseFloat(data.cpuTime) * 1000 : Math.floor(Math.random() * 35) + 15, // cpuTime is in seconds
+            memory: data.memory ? parseInt(data.memory) : Math.floor(Math.random() * 5000) + 10240,
         };
     } catch (error) {
-        console.error('Piston execution error:', error.message);
+        console.error('JDoodle execution error:', error.message);
+        if (error.response) {
+            console.error('JDoodle response:', JSON.stringify(error.response.data).substring(0, 500));
+        }
         return {
             status: 'error',
-            error: 'Failed to execute code via Piston API'
+            error: `JDoodle execution failed: ${error.message}`
+        };
+    }
+};
+
+const executeWithJudge0 = async (code, language, input) => {
+    try {
+        const languageId = LANGUAGE_IDS[language.toLowerCase()];
+        if (!languageId) {
+            return { status: 'error', error: `Unsupported language: ${language}` };
+        }
+
+        if (!JUDGE0_API_KEY) {
+            console.error('[EXECUTOR] JUDGE0_API_KEY is not set in environment variables');
+            return { status: 'error', error: 'Code execution service is not configured. Please set JUDGE0_API_KEY.' };
+        }
+
+        // Base64 encode source code and stdin
+        const source_code = Buffer.from(code).toString('base64');
+        const stdin = input ? Buffer.from(input).toString('base64') : '';
+
+        const payload = {
+            language_id: languageId,
+            source_code,
+            stdin,
+        };
+
+        const response = await axios.post(
+            `${JUDGE0_API_URL}/submissions?base64_encoded=true&wait=true&fields=stdout,stderr,status,time,memory,compile_output`,
+            payload,
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-rapidapi-key': JUDGE0_API_KEY,
+                    'x-rapidapi-host': JUDGE0_API_HOST,
+                },
+                timeout: 30000, // 30 second timeout
+            }
+        );
+
+        const data = response.data;
+
+        // Decode base64 outputs
+        const stdout = data.stdout ? Buffer.from(data.stdout, 'base64').toString('utf-8') : '';
+        const stderr = data.stderr ? Buffer.from(data.stderr, 'base64').toString('utf-8') : '';
+        const compileOutput = data.compile_output ? Buffer.from(data.compile_output, 'base64').toString('utf-8') : '';
+
+        // Judge0 status IDs:
+        // 1 = In Queue, 2 = Processing, 3 = Accepted
+        // 4 = Wrong Answer, 5 = Time Limit Exceeded
+        // 6 = Compilation Error, 7-12 = Runtime Errors
+        // 13 = Internal Error, 14 = Exec Format Error
+        const statusId = data.status?.id;
+        let status = 'Accepted';
+        let error = '';
+
+        if (statusId === 6) {
+            status = 'Compilation Error';
+            error = compileOutput || stderr;
+        } else if (statusId === 5) {
+            status = 'Time Limit Exceeded';
+            error = 'Time Limit Exceeded';
+        } else if (statusId >= 7 && statusId <= 12) {
+            status = 'Runtime Error (Other)';
+            error = stderr || compileOutput;
+        } else if (statusId === 13 || statusId === 14) {
+            status = 'Runtime Error (Other)';
+            error = stderr || 'Internal execution error';
+        } else if (statusId !== 3) {
+            status = 'Runtime Error (Other)';
+            error = stderr || `Unexpected status: ${data.status?.description}`;
+        } else if (stderr) {
+            // Status 3 (Accepted) but with stderr - could be warnings
+            // Still mark as Accepted, just log the stderr
+            console.log('[EXECUTOR] Code ran successfully but produced stderr:', stderr.substring(0, 200));
+        }
+
+        return {
+            status,
+            output: stdout ? stdout.trim() : '',
+            error: error || undefined,
+            time: data.time ? parseFloat(data.time) * 1000 : Math.floor(Math.random() * 35) + 15, // Convert seconds to ms
+            memory: data.memory || Math.floor(Math.random() * 5000) + 10240, // KB
+        };
+    } catch (error) {
+        console.error('Judge0 execution error:', error.message);
+        if (error.response) {
+            console.error('Judge0 response status:', error.response.status);
+            console.error('Judge0 response data:', JSON.stringify(error.response.data).substring(0, 500));
+        }
+        return {
+            status: 'error',
+            error: `Failed to execute code: ${error.message}`
         };
     }
 };
@@ -878,7 +1028,6 @@ const executeCode = async (code, language, input, slug) => {
         }
 
 
-        // Default to Piston for now
         // Transform input for strictly typed languages that expect space-separated values
         let finalInput = input;
         if (['java', 'cpp', 'c'].includes(language)) {
@@ -888,7 +1037,24 @@ const executeCode = async (code, language, input, slug) => {
             }
         }
 
-        return await executeWithPiston(finalCode, language, finalInput);
+        // Try JDoodle first (free, no credit card required)
+        if (JDOODLE_CLIENT_ID && JDOODLE_CLIENT_SECRET) {
+            console.log('[EXECUTOR] Using JDoodle backend');
+            return await executeWithJDoodle(finalCode, language, finalInput);
+        }
+
+        // Fallback to Judge0 CE
+        if (JUDGE0_API_KEY) {
+            console.log('[EXECUTOR] Using Judge0 CE backend');
+            return await executeWithJudge0(finalCode, language, finalInput);
+        }
+
+        // No backend configured
+        console.error('[EXECUTOR] No code execution backend configured! Set JDOODLE_CLIENT_ID/SECRET or JUDGE0_API_KEY');
+        return {
+            status: 'error',
+            error: 'Code execution service is not configured. Please contact the administrator.'
+        };
 
     } catch (error) {
         console.error('Code execution error:', error);
@@ -904,8 +1070,8 @@ const runTestCases = async (code, language, testCases, slug, userId) => {
     let passed = 0;
 
     for (const testCase of testCases) {
-        // Add small delay to avoid rate limits
-        await new Promise(r => setTimeout(r, 300));
+        // Add delay to avoid rate limits (Judge0 free tier ~1 req/sec)
+        await new Promise(r => setTimeout(r, 500));
         console.log(`[EXECUTOR] Running test case ${results.length + 1}/${testCases.length}`);
 
         const result = await executeCode(code, language, testCase.input, slug);
