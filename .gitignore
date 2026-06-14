@@ -1,0 +1,16 @@
+node_modules/
+.env
+dist/
+*.log
+.DS_Store
+brain/
+server/temp_local_exec/
+server/test_judge0_verbose.js
+verify_logs.txt
+verify_logs_2.txt
+java_debug.java
+server/java_debug.java
+server/python_results*.txt
+server/python_debug_results.txt
+server/crash_log.txt
+server/integrity_log.txt

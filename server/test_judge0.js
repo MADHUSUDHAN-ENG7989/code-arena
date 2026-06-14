@@ -5,7 +5,9 @@ const JUDGE0_API_URL = process.env.JUDGE0_API_URL || 'https://judge0-ce.p.rapida
 const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY;
 const JUDGE0_API_HOST = 'judge0-ce.p.rapidapi.com';
 
-if (!JUDGE0_API_KEY) {
+const isRapidAPI = JUDGE0_API_URL.includes('rapidapi.com');
+
+if (isRapidAPI && !JUDGE0_API_KEY) {
     console.error('❌ JUDGE0_API_KEY is not set in .env file');
     console.log('Get your free key at: https://rapidapi.com/judge0-official/api/judge0-ce');
     process.exit(1);
@@ -17,6 +19,14 @@ async function testJudge0(langName, langId, code, expectedOutput) {
         
         const source_code = Buffer.from(code).toString('base64');
         
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+        if (isRapidAPI) {
+            headers['x-rapidapi-key'] = JUDGE0_API_KEY;
+            headers['x-rapidapi-host'] = JUDGE0_API_HOST;
+        }
+
         const response = await axios.post(
             `${JUDGE0_API_URL}/submissions?base64_encoded=true&wait=true&fields=stdout,stderr,status,time,memory,compile_output`,
             {
@@ -25,11 +35,7 @@ async function testJudge0(langName, langId, code, expectedOutput) {
                 stdin: '',
             },
             {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-rapidapi-key': JUDGE0_API_KEY,
-                    'x-rapidapi-host': JUDGE0_API_HOST,
-                },
+                headers,
                 timeout: 30000,
             }
         );
@@ -58,7 +64,7 @@ async function testJudge0(langName, langId, code, expectedOutput) {
 async function main() {
     console.log('=== Judge0 CE API Test ===');
     console.log(`API URL: ${JUDGE0_API_URL}`);
-    console.log(`API Key: ${JUDGE0_API_KEY.substring(0, 8)}...`);
+    console.log(`API Key: ${JUDGE0_API_KEY ? JUDGE0_API_KEY.substring(0, 8) + '...' : '(Not set/Self-hosted)'}`);
     
     // Python test
     await testJudge0('Python 3', 71, 'print("Hello from Judge0")', 'Hello from Judge0');

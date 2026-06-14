@@ -55,7 +55,7 @@ function createQuestion(title, slug, difficulty, topic, description, constraints
     }
 
     const javaRet = getJavaType(returnType);
-    const cppRet = getCppType(returnType);
+    const cppRet = getCppType(returnType).replace('&', '');
 
     const starterCode = {
         javascript: `function ${fn}(${jsArgs}) {\n    // Your code here\n}`,

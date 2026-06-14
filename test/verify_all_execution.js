@@ -1,20 +1,42 @@
+const path = require('path');
+const fs = require('fs');
+require('../server/node_modules/dotenv').config({ path: path.resolve(__dirname, '../server/.env') });
+
+// Enable local mock execution in codeExecutor
+process.env.LOCAL_EXECUTION = 'true';
+
 const { executeCode } = require('../server/src/services/codeExecutor');
 const { allQuestions } = require('../server/add_all_54_final');
 
-const LANGUAGES = ['python', 'java', 'cpp'];
+// Local validation will test Javascript, Python, and C++ (since g++ is installed locally)
+// Java is skipped locally because JDK is not installed.
+const LANGUAGES = ['javascript', 'python', 'cpp'];
 
 // Map return types to dummy values for each language
 const DUMMY_VALUES = {
-    int: { python: '0', java: '0', cpp: '0' },
-    string: { python: '""', java: '""', cpp: '""' },
-    boolean: { python: 'False', java: 'false', cpp: 'false' },
-    'int[]': { python: '[]', java: 'new int[0]', cpp: 'vector<int>()' },
-    'string[]': { python: '[]', java: 'new String[0]', cpp: 'vector<string>()' },
-    'int[][]': { python: '[]', java: 'new int[0][0]', cpp: 'vector<vector<int>>()' },
-    'char[][]': { python: '[]', java: 'new char[0][0]', cpp: 'vector<vector<char>>()' },
-    'void': { python: '', java: '', cpp: '' },
-    'ListNode': { python: 'None', java: 'null', cpp: 'nullptr' },
-    'TreeNode': { python: 'None', java: 'null', cpp: 'nullptr' }
+    int: { javascript: '0', python: '0', java: '0', cpp: '0' },
+    string: { javascript: '""', python: '""', java: '""', cpp: '""' },
+    boolean: { javascript: 'false', python: 'False', java: 'false', cpp: 'false' },
+    'int[]': { javascript: '[]', python: '[]', java: 'new int[0]', cpp: 'vector<int>()' },
+    'string[]': { javascript: '[]', python: '[]', java: 'new String[0]', cpp: 'vector<string>()' },
+    'int[][]': { javascript: '[]', python: '[]', java: 'new int[0][0]', cpp: 'vector<vector<int>>()' },
+    'char[][]': { javascript: '[]', python: '[]', java: 'new char[0][0]', cpp: 'vector<vector<char>>()' },
+    'void': { javascript: '', python: '', java: '', cpp: '' },
+    'ListNode': { javascript: 'null', python: 'None', java: 'null', cpp: 'nullptr' },
+    'TreeNode': { javascript: 'null', python: 'None', java: 'null', cpp: 'nullptr' }
+};
+
+const EXISTING_10_META = {
+    'two-sum': { returnType: 'int[]' },
+    'reverse-string': { returnType: 'void' },
+    'valid-palindrome': { returnType: 'boolean' },
+    'remove-duplicates-from-sorted-array': { returnType: 'int' },
+    'valid-anagram': { returnType: 'boolean' },
+    'maximum-subarray': { returnType: 'int' },
+    'merge-sorted-arrays': { returnType: 'int[]' },
+    'move-zeroes': { returnType: 'void' },
+    'best-time-to-buy-and-sell-stock': { returnType: 'int' },
+    'length-of-last-word': { returnType: 'int' }
 };
 
 const getDummyReturn = (lang, retType) => {
@@ -23,31 +45,69 @@ const getDummyReturn = (lang, retType) => {
 };
 
 const generateMockCode = (lang, q) => {
-    const fn = (lang === 'python')
-        ? q.starterCode.python.match(/def (.*?)\(/)[1]
-        : q.meta.args.fn; // Fallback, though we should parse signature
+    const meta = q.meta || EXISTING_10_META[q.slug];
+    if (!meta) {
+        throw new Error(`Metadata not found for question ${q.slug}`);
+    }
 
-    // Actually, simple regex replacement on starterCode is safer
     let code = q.starterCode[lang];
-    const retVal = getDummyReturn(lang, q.meta.returnType);
+    if (!code) {
+        throw new Error(`Starter code for language ${lang} not found`);
+    }
+    const retVal = getDummyReturn(lang, meta.returnType);
 
-    if (lang === 'python') {
-        code = code.replace(/pass/, `return ${retVal}`);
+    if (lang === 'javascript') {
+        if (meta.returnType === 'void') return code;
+        if (code.includes('// Your code here')) {
+            return code.replace('// Your code here', `return ${retVal};`);
+        }
+        if (code.includes('// your code here')) {
+            return code.replace('// your code here', `return ${retVal};`);
+        }
+        return code.replace(/\}\s*$/, `    return ${retVal};\n}`);
+    } else if (lang === 'python') {
+        if (code.includes('pass')) {
+            return code.replace('pass', `return ${retVal}`);
+        }
+        return code + `\n        return ${retVal}`;
     } else if (lang === 'java') {
-        if (q.meta.returnType === 'void') return code; // No return needed
-        // Inject return before closing brace of function
-        code = code.replace(/\}\s*$/, `    return ${retVal};\n}`);
+        if (meta.returnType === 'void') return code;
+        if (code.includes('// Your code here')) {
+            return code.replace('// Your code here', `return ${retVal};`);
+        }
+        if (code.includes('// your code here')) {
+            return code.replace('// your code here', `return ${retVal};`);
+        }
+        const lastBraceIdx = code.lastIndexOf('}');
+        if (lastBraceIdx !== -1) {
+            const secondLastBraceIdx = code.lastIndexOf('}', lastBraceIdx - 1);
+            if (secondLastBraceIdx !== -1) {
+                return code.substring(0, secondLastBraceIdx) + `    return ${retVal};\n    ` + code.substring(secondLastBraceIdx);
+            }
+        }
+        return code.replace(/\}\s*$/, `    return ${retVal};\n}`);
     } else if (lang === 'cpp') {
-        if (q.meta.returnType === 'void') return code;
-        code = code.replace(/\}\s*;\s*$/, `    return ${retVal};\n};`);
-        // Also handle C++ starter code which sometimes ends with braces differently
-        code = code.replace(/\}\s*$/, `    return ${retVal};\n}`);
+        if (meta.returnType === 'void') return code;
+        if (code.includes('// Your code here')) {
+            return code.replace('// Your code here', `return ${retVal};`);
+        }
+        if (code.includes('// your code here')) {
+            return code.replace('// your code here', `return ${retVal};`);
+        }
+        const lastBraceIdx = code.lastIndexOf('}');
+        if (lastBraceIdx !== -1) {
+            const secondLastBraceIdx = code.lastIndexOf('}', lastBraceIdx - 1);
+            if (secondLastBraceIdx !== -1) {
+                return code.substring(0, secondLastBraceIdx) + `    return ${retVal};\n    ` + code.substring(secondLastBraceIdx);
+            }
+        }
+        return code.replace(/\}\s*;\s*$/, `    return ${retVal};\n};`).replace(/\}\s*$/, `    return ${retVal};\n}`);
     }
     return code;
 };
 
 async function runMassVerify() {
-    console.log(`Starting Mass Verification for ${allQuestions.length} questions...`);
+    console.log(`Starting Local Mass Verification for ${allQuestions.length} questions...`);
     let totalTests = 0;
     let failedTests = 0;
     let crashLog = [];
@@ -64,7 +124,6 @@ async function runMassVerify() {
                 failedTests++;
                 continue;
             }
-            // console.log(`  [${lang}] Code check: ${mockCode.substring(0, 50)}...`);
 
             for (let i = 0; i < q.testCases.length; i++) {
                 const tc = q.testCases[i];
@@ -74,25 +133,23 @@ async function runMassVerify() {
                     const res = await executeCode(mockCode, lang, tc.input, q.slug);
                     totalTests++;
 
-                    if (res.status?.id === 6) { // Compilation Error
+                    if (res.status === 'Compilation Error') {
                         console.log(`❌ COMPILE ERROR`);
-                        console.log(res.output);
+                        console.log(res.error || res.output);
                         failedTests++;
-                        crashLog.push({ q: q.slug, lang, tc: i, err: 'Compile Error', out: res.output });
-                    } else if (res.status?.id >= 7 && res.status?.id <= 12) { // Runtime Error
-                        console.log(`❌ RUNTIME ERROR (${res.status.description})`);
-                        // console.log(res.output);
-                        // Some runtime errors are expected if dummy code doesn't handle input (e.g. arrayOutOfBounds empty return)
-                        // But we want to ensure *Driver* didn't crash on input parsing.
-                        // Input parsing happens BEFORE user code.
-                        // If Input Parsing fails, it usually throws Compilation Error (Java) or Runtime Error (Python).
-                        // We should inspect output.
+                        crashLog.push({ q: q.slug, lang, tc: i, err: 'Compile Error', out: res.error || res.output });
+                    } else if (res.status?.includes('Runtime Error')) {
+                        console.log(`❌ RUNTIME ERROR (${res.status})`);
+                        console.log(res.error || res.output);
                         failedTests++;
-                        crashLog.push({ q: q.slug, lang, tc: i, err: res.status.description, out: res.output });
+                        crashLog.push({ q: q.slug, lang, tc: i, err: res.status, out: res.error || res.output });
+                    } else if (res.status === 'error') {
+                        console.log(`❌ INFRA ERROR`);
+                        console.log(res.error);
+                        failedTests++;
+                        crashLog.push({ q: q.slug, lang, tc: i, err: 'Infra Error', out: res.error });
                     } else {
-                        // Accepted (3) or Wrong Answer (4) -> BOTH OK.
-                        // We expect Wrong Answer because we return dummy values.
-                        console.log(`✅ OK (Status: ${res.status?.description || 'Accepted'})`);
+                        console.log(`✅ OK (Status: ${res.status})`);
                     }
 
                 } catch (e) {
@@ -101,9 +158,6 @@ async function runMassVerify() {
                     failedTests++;
                     crashLog.push({ q: q.slug, lang, tc: i, err: 'Infra Crash', out: e.message });
                 }
-
-                // Small delay to avoid rate limits
-                await new Promise(r => setTimeout(r, 200));
             }
         }
     }

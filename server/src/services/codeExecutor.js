@@ -59,9 +59,9 @@ const generateDriver = (code, language, slug) => {
     if (language === 'javascript') {
         const imports = `
 const fs = require('fs');
-const input = fs.readFileSync(0, 'utf-8').replace(/\r?\n$/, '');
+const input = fs.readFileSync(0, 'utf-8').replace(/\\r?\\n$/, '');
 if (input === '') return;
-const lines = input.replace(/\\\\n/g, '\\n').split('\\n');
+const lines = input.replace(/\\\\\\\\n/g, '\\\\n').split('\\\\n');
 `;
         // Helpers
         let helpers = '';
@@ -80,6 +80,8 @@ const lines = input.replace(/\\\\n/g, '\\n').split('\\n');
                 parsing += `const ${arg.name} = ${lineRef}.trim().split(/\\s+/).map(Number);\n`;
             } else if (arg.type === 'string') {
                 parsing += `const ${arg.name} = ${lineRef}.trim();\n`;
+            } else if (arg.type === 'char[]') {
+                parsing += `const ${arg.name} = ${lineRef}.trim().split(/\\s+/);\n`;
             } else if (arg.type === 'string[]') {
                 parsing += `let ${arg.name}; try { ${arg.name} = JSON.parse(${lineRef}); } catch(e) { ${arg.name} = ${lineRef}.trim().split(/\\s+/); }\n`;
             } else if (arg.type === 'int[][]') {
@@ -100,19 +102,43 @@ const lines = input.replace(/\\\\n/g, '\\n').split('\\n');
         let execution = `const result = ${config.fn}(${argNames.join(', ')});\n`;
 
         let output = '';
-        if (config.returnType === 'int[]') {
+        if (config.slug === 'group-anagrams') {
+            output = `
+if (Array.isArray(result)) {
+    const sortedGroups = result.map(g => Array.isArray(g) ? g.slice().sort() : [g]);
+    sortedGroups.forEach(g => g.sort());
+    sortedGroups.sort((a, b) => {
+        if (a.length !== b.length) return a.length - b.length;
+        return a.join(' ').localeCompare(b.join(' '));
+    });
+    console.log(sortedGroups.map(g => g.join(' ')).join('|'));
+} else {
+    console.log(result);
+}
+`;
+        } else if (config.slug === 'text-justification') {
+            output = `console.log(Array.isArray(result) ? result.join('|') : result);\n`;
+        } else if (config.returnType === 'int[]') {
             if (config.sortResult) execution += `if(Array.isArray(result)) result.sort((a, b) => a - b);\n`;
             output = `console.log(Array.isArray(result) ? result.join(' ') : result);\n`;
-        } else if (config.returnType === 'int[][]' || config.returnType === 'string[]' || config.returnType === 'char[][]') {
+        } else if (config.returnType === 'string[]') {
+            output = `console.log(Array.isArray(result) ? result.join(' ') : result);\n`;
+        } else if (config.returnType === 'int[][]') {
+            output = `console.log(Array.isArray(result) ? result.flat().join(' ') : result);\n`;
+        } else if (config.returnType === 'char[][]') {
             output = `console.log(JSON.stringify(result));\n`;
         } else if (config.returnType === 'ListNode') {
             output = `printLinkedList(result);\n`;
         } else if (config.returnType === 'boolean') {
             output = `console.log(result);\n`;
         } else if (config.returnType === 'void') {
-            output = `console.log(JSON.stringify(${argNames[0]}));\n`;
+            const firstArg = config.args[0];
+            if (firstArg.type === 'int[]' || firstArg.type === 'char[]') {
+                output = `console.log(Array.isArray(${argNames[0]}) ? ${argNames[0]}.join(' ') : ${argNames[0]});\n`;
+            } else {
+                output = `console.log(JSON.stringify(${argNames[0]}));\n`;
+            }
         } else {
-            // int, string, etc.
             output = `console.log(result);\n`;
         }
 
@@ -126,13 +152,13 @@ from typing import List, Optional, Dict, Set, Tuple
 
 
 # Read input and handle potential formatting issues
-input_str = sys.stdin.read().rstrip('\r\n')
+input_str = sys.stdin.read().rstrip('\\\\r\\\\n')
 if not input_str:
     sys.exit(0)
 
 # Split into lines, filtering out empty ones if needed, or preserving mapping
 # We attempt to be robust: treat real newlines and escaped newlines as separators
-lines = [line.strip() for line in input_str.replace('\\\\n', '\\n').split('\\n') if line.strip()]
+lines = [line.strip() for line in input_str.replace('\\\\\\\\n', '\\\\n').split('\\\\n') if line.strip()]
 `;
         let helpers = '';
         if (config.args.some(a => a.type === 'ListNode') || config.returnType === 'ListNode') helpers += PY_LIST_NODE;
@@ -185,12 +211,25 @@ while len(lines) < required_args:
         const fnName = config.fn.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
         let execution = `sol = Solution()\nresult = sol.${fnName}(${argNames.join(', ')})\n`;
         let output = '';
-        if (config.returnType === 'int[]') {
+        if (config.slug === 'group-anagrams') {
+            output = `
+if isinstance(result, list):
+    sorted_groups = [sorted(g) if isinstance(g, list) else [g] for g in result]
+    sorted_groups.sort(key=lambda x: (len(x), " ".join(x)))
+    print("|".join(" ".join(g) for g in sorted_groups))
+else:
+    print(result)
+`;
+        } else if (config.slug === 'text-justification') {
+            output = `print("|".join(result) if isinstance(result, list) else result)\n`;
+        } else if (config.returnType === 'int[]') {
             if (config.sortResult) execution += `if isinstance(result, list): result.sort()\n`;
             output = `print(" ".join(map(str, result)) if isinstance(result, list) else result)\n`;
         } else if (config.returnType === 'char[]' || config.returnType === 'string[]') {
-            output = `print(" ".join(result) if result else "")\n`;
-        } else if (config.returnType === 'int[][]' || config.returnType === 'char[][]') {
+            output = `print(" ".join(result) if isinstance(result, list) else result)\n`;
+        } else if (config.returnType === 'int[][]') {
+            output = `print(" ".join(map(str, [x for sub in result for x in sub])) if isinstance(result, list) and len(result) > 0 and isinstance(result[0], list) else result)\n`;
+        } else if (config.returnType === 'char[][]') {
             output = `print(json.dumps(result).replace(" ", ""))\n`;
         } else if (config.returnType === 'void') {
             output = `print(json.dumps(${argNames[0]}).replace(" ", "")) if isinstance(${argNames[0]}, list) and len(${argNames[0]}) > 0 and isinstance(${argNames[0]}[0], list) else print(" ".join(map(str, ${argNames[0]})) if isinstance(${argNames[0]}, list) else ${argNames[0]})\n`;
@@ -232,12 +271,12 @@ class Main {
         StringBuilder inputBuilder = new StringBuilder();
         String line;
         while ((line = reader.readLine()) != null) {
-            inputBuilder.append(line).append("\\n");
+            inputBuilder.append(line).append("\\\\n");
         }
-        String input = inputBuilder.toString().replaceAll("\\r?\\n$", "");
+        String input = inputBuilder.toString().replaceAll("\\\\r?\\\\n$", "");
         if (input.isEmpty()) return;
         
-        String[] lines = input.replace("\\\\n", "\\n").split("\\n");
+        String[] lines = input.replace("\\\\\\\\n", "\\\\n").split("\\\\n");
         Solution solution = new Solution();
 `;
         let parsing = '';
@@ -253,6 +292,12 @@ class Main {
                 parsing += `for(int i=0;i<${arg.name}_str.length;i++) ${arg.name}[i] = Integer.parseInt(${arg.name}_str[i]);\n`;
             } else if (arg.type === 'string') {
                 parsing += `String ${arg.name} = ${lineRef};\n`;
+            } else if (arg.type === 'char[]') {
+                parsing += `String[] ${arg.name}_str = ${lineRef}.split("\\\\s+");\n`;
+                parsing += `char[] ${arg.name} = new char[${arg.name}_str.length];\n`;
+                parsing += `for(int i=0;i<${arg.name}_str.length;i++) ${arg.name}[i] = ${arg.name}_str[i].charAt(0);\n`;
+            } else if (arg.type === 'string[]') {
+                parsing += `String[] ${arg.name} = ${lineRef}.split("\\\\s+");\n`;
             } else if (arg.type === 'ListNode') {
                 parsing += `ListNode ${arg.name} = LinkedListHelper.create(${lineRef});\n`;
             } else if (arg.type === 'TreeNode') {
@@ -276,38 +321,38 @@ class Main {
 
         let execution = '';
         let output = '';
-        // Java requires type for result
-        let resultType = '';
-        if (config.returnType === 'int') resultType = 'int';
-        else if (config.returnType === 'boolean') resultType = 'boolean';
-        else if (config.returnType === 'int[]') resultType = 'int[]';
-        else if (config.returnType === 'ListNode') resultType = 'ListNode';
-        else if (config.returnType === 'string') resultType = 'String';
-        else if (config.returnType === 'List<Integer>') resultType = 'List<Integer>'; // Special case for inorder
-
-        // Special override for inorder traversal which returns List<Integer> in Java starter code usually? 
-        // Config says 'int[]' for consistency but Java might use List.
-        // Let's assume standard LeetCode:
-        // Two Sum -> int[]
-        // Inorder -> List<Integer>
-        // We can infer from configs if we want OR just handle explicit override.
-        // For now, let's map 'int[]' to 'int[]' unless it's tree traversal? 
-        // Config returnType 'int[]' in config maps to `int[]` in Java normally.
-        // But Inorder Traversal is List<Integer>. 
-        // I'll adjust the logic: if slug is binary-tree..., use List<Integer>.
-
         let callFn = `solution.${config.fn}(${argNames.join(', ')})`;
 
-        if (config.returnType === 'int[]') {
-            // Check if it's actually List<Integer> (some tree problems)
-            if (config.slug === 'binary-tree-inorder-traversal') {
-                execution = `List<Integer> result = ${callFn};\n`;
-                output = `System.out.println(result.stream().map(String::valueOf).collect(Collectors.joining(" ")));\n`;
-            } else {
-                execution = `int[] result = ${callFn};\n`;
-                if (config.sortResult) execution += `// Arrays.sort(result);\n`;
-                output = `for(int i=0; i<result.length; i++) { System.out.print(result[i]); if(i<result.length-1) System.out.print(" "); } System.out.println();\n`;
+        if (config.slug === 'group-anagrams') {
+            execution = `List<List<String>> result = ${callFn};\n`;
+            output = `
+            List<List<String>> sortedGroups = new ArrayList<>();
+            for (List<String> g : result) {
+                List<String> sortedG = new ArrayList<>(g);
+                Collections.sort(sortedG);
+                sortedGroups.add(sortedG);
             }
+            Collections.sort(sortedGroups, new Comparator<List<String>>() {
+                public int compare(List<String> a, List<String> b) {
+                    if (a.size() != b.size()) return a.size() - b.size();
+                    return String.join(" ", a).compareTo(String.join(" ", b));
+                }
+            });
+            List<String> joinedGroups = new ArrayList<>();
+            for (List<String> g : sortedGroups) {
+                joinedGroups.add(String.join(" ", g));
+            }
+            System.out.println(String.join("|", joinedGroups));
+            `;
+        } else if (config.slug === 'text-justification') {
+            execution = `List<String> result = ${callFn};\n`;
+            output = `System.out.println(String.join("|", result));\n`;
+        } else if (config.returnType === 'int[]') {
+            execution = `int[] result = ${callFn};\n`;
+            output = `for(int i=0; i<result.length; i++) { System.out.print(result[i]); if(i<result.length-1) System.out.print(" "); } System.out.println();\n`;
+        } else if (config.returnType === 'string[]') {
+            execution = `String[] result = ${callFn};\n`;
+            output = `System.out.println(String.join(" ", result));\n`;
         } else if (config.returnType === 'ListNode') {
             execution = `ListNode result = ${callFn};\n`;
             output = `LinkedListHelper.print(result);\n`;
@@ -316,13 +361,19 @@ class Main {
             output = `System.out.println(String.valueOf(result).toLowerCase());\n`;
         } else if (config.returnType === 'int[][]') {
             execution = `int[][] result = ${callFn};\n`;
-            output = `for(int[] row : result) { for(int val : row) { System.out.print(val + " "); } }\n`;
+            output = `for(int[] row : result) { for(int val : row) { System.out.print(val + " "); } } System.out.println();\n`;
         } else if (config.returnType === 'void') {
             execution = `${callFn};\n`;
-            // Assuming 1st arg is the one modified (matrix)
-            output = `for(int[] row : ${argNames[0]}) { for(int val : row) { System.out.print(val + " "); } }\n`;
+            const firstArg = config.args[0];
+            if (firstArg.type === 'int[]' || firstArg.type === 'char[]') {
+                output = `for(int i=0; i<${argNames[0]}.length; i++) { System.out.print(${argNames[0]}[i]); if(i<${argNames[0]}.length-1) System.out.print(" "); } System.out.println();\n`;
+            } else {
+                output = `StringBuilder sb = new StringBuilder("["); for(int r=0; r<${argNames[0]}.length; r++) { sb.append("["); for(int c=0; c<${argNames[0]}[r].length; c++) { sb.append(${argNames[0]}[r][c]); if(c < ${argNames[0]}[r].length-1) sb.append(","); } sb.append("]"); if(r < ${argNames[0]}.length-1) sb.append(","); } sb.append("]"); System.out.println(sb.toString());\n`;
+            }
         } else {
-            execution = `${config.returnType} result = ${callFn};\n`;
+            let javaRetType = config.returnType;
+            if (config.returnType === 'string') javaRetType = 'String';
+            execution = `${javaRetType} result = ${callFn};\n`;
             output = `System.out.println(result);\n`;
         }
 
@@ -353,6 +404,14 @@ int main() {
     string input, line;
     while (getline(cin, line)) input += line + "\\n";
     if (input.empty()) return 0;
+    
+    // Replace all "\\\\n" with "\\n"
+    size_t pos = 0;
+    while ((pos = input.find("\\\\n", pos)) != string::npos) {
+        input.replace(pos, 2, "\\n");
+        pos += 1;
+    }
+
     stringstream ss(input);
     string segment;
     vector<string> lines;
@@ -365,11 +424,15 @@ int main() {
             argNames.push(arg.name);
             const ref = `lines[${i}]`;
             if (arg.type === 'int') {
-                parsing += `int ${arg.name} = stoi(${ref});\n`;
+                parsing += `int ${arg.name} = stoll(${ref});\n`;
             } else if (arg.type === 'int[]') {
                 parsing += `vector<int> ${arg.name}; { stringstream ss_arg(${ref}); int val; while(ss_arg >> val) ${arg.name}.push_back(val); }\n`;
             } else if (arg.type === 'string') {
                 parsing += `string ${arg.name} = ${ref}; ${arg.name}.erase(${arg.name}.find_last_not_of(" \\n\\r\\t")+1);\n`; // trim
+            } else if (arg.type === 'char[]') {
+                parsing += `vector<char> ${arg.name}; { stringstream ss_arg(${ref}); char val; while(ss_arg >> val) ${arg.name}.push_back(val); }\n`;
+            } else if (arg.type === 'string[]') {
+                parsing += `vector<string> ${arg.name}; { stringstream ss_arg(${ref}); string val; while(ss_arg >> val) ${arg.name}.push_back(val); }\n`;
             } else if (arg.type === 'ListNode') {
                 parsing += `vector<int> ${arg.name}_arr; { stringstream ss_arg(${ref}); int val; while(ss_arg >> val) ${arg.name}_arr.push_back(val); }\n`;
                 parsing += `ListNode* ${arg.name} = createLinkedList(${arg.name}_arr);\n`;
@@ -392,9 +455,36 @@ int main() {
 
         let call = `solution.${config.fn}(${argNames.join(', ')})`;
 
-        if (config.returnType === 'int[]') {
+        if (config.slug === 'group-anagrams') {
+            execution = `vector<vector<string>> result = ${call};\n`;
+            output = `
+            for (auto& g : result) {
+                sort(g.begin(), g.end());
+            }
+            sort(result.begin(), result.end(), [](const vector<string>& a, const vector<string>& b) {
+                if (a.size() != b.size()) return a.size() < b.size();
+                string sa = "", sb = "";
+                for(size_t i=0; i<a.size(); ++i) sa += a[i] + (i==a.size()-1?"":" ");
+                for(size_t i=0; i<b.size(); ++i) sb += b[i] + (i==b.size()-1?"":" ");
+                return sa < sb;
+            });
+            for (size_t i = 0; i < result.size(); ++i) {
+                for (size_t j = 0; j < result[i].size(); ++j) {
+                    cout << result[i][j] << (j == result[i].size() - 1 ? "" : " ");
+                }
+                cout << (i == result.size() - 1 ? "" : "|");
+            }
+            cout << endl;
+            `;
+        } else if (config.slug === 'text-justification') {
+            execution = `vector<string> result = ${call};\n`;
+            output = `for (size_t i = 0; i < result.size(); ++i) { cout << result[i] << (i == result.size() - 1 ? "" : "|"); } cout << endl;\n`;
+        } else if (config.returnType === 'int[]') {
             execution = `vector<int> result = ${call};\n`;
             if (config.sortResult) execution += `sort(result.begin(), result.end());\n`;
+            output = `for(size_t i=0; i<result.size(); ++i) cout << result[i] << (i==result.size()-1?"":" "); cout << endl;\n`;
+        } else if (config.returnType === 'string[]') {
+            execution = `vector<string> result = ${call};\n`;
             output = `for(size_t i=0; i<result.size(); ++i) cout << result[i] << (i==result.size()-1?"":" "); cout << endl;\n`;
         } else if (config.returnType === 'ListNode') {
             execution = `ListNode* result = ${call};\n`;
@@ -407,9 +497,13 @@ int main() {
             output = `for(const auto& row : result) for(int val : row) cout << val << " "; cout << endl;\n`;
         } else if (config.returnType === 'void') {
             execution = `${call};\n`;
-            output = `for(const auto& row : ${argNames[0]}) for(int val : row) cout << val << " "; cout << endl;\n`;
+            const firstArg = config.args[0];
+            if (firstArg.type === 'int[]' || firstArg.type === 'char[]') {
+                output = `for(size_t i=0; i<${argNames[0]}.size(); ++i) cout << ${argNames[0]}[i] << (i==${argNames[0]}.size()-1?"":" "); cout << endl;\n`;
+            } else {
+                output = `cout << "["; for(size_t r=0; r<${argNames[0]}.size(); ++r) { cout << "["; for(size_t c=0; c<${argNames[0]}[r].size(); ++c) { cout << ${argNames[0]}[r][c] << (c==${argNames[0]}[r].size()-1 ? "" : ","); } cout << "]" << (r==${argNames[0]}.size()-1 ? "" : ","); } cout << "]" << endl;\n`;
+            }
         } else {
-            // int
             execution = `auto result = ${call};\n`;
             output = `cout << result << endl;\n`;
         }
@@ -753,19 +847,19 @@ struct TreeNode {
 
 TreeNode* createBinaryTree(std::vector<std::string>& parts) {
     if(parts.empty() || parts[0] == "null") return nullptr;
-    TreeNode* root = new TreeNode(std::stoi(parts[0]));
+    TreeNode* root = new TreeNode(std::stoll(parts[0]));
     std::queue<TreeNode*> q;
     q.push(root);
     size_t i = 1;
     while(i < parts.size()) {
         TreeNode* current = q.front(); q.pop();
         if(i < parts.size() && parts[i] != "null") {
-            current->left = new TreeNode(std::stoi(parts[i]));
+            current->left = new TreeNode(std::stoll(parts[i]));
             q.push(current->left);
         }
         i++;
         if(i < parts.size() && parts[i] != "null") {
-            current->right = new TreeNode(std::stoi(parts[i]));
+            current->right = new TreeNode(std::stoll(parts[i]));
             q.push(current->right);
         }
         i++;
@@ -1004,10 +1098,10 @@ const executeWithJudge0 = async (code, language, input) => {
             status = 'Runtime Error (Other)';
             error = stderr || compileOutput;
         } else if (statusId === 13 || statusId === 14) {
-            status = 'Runtime Error (Other)';
+            status = 'error';
             error = stderr || 'Internal execution error';
         } else if (statusId !== 3) {
-            status = 'Runtime Error (Other)';
+            status = 'error';
             error = stderr || `Unexpected status: ${data.status?.description}`;
         } else if (stderr) {
             // Status 3 (Accepted) but with stderr - could be warnings
@@ -1035,6 +1129,73 @@ const executeWithJudge0 = async (code, language, input) => {
     }
 };
 
+const executeLocally = async (code, language, input, slug) => {
+    const fs = require('fs');
+    const { execSync } = require('child_process');
+    const path = require('path');
+    
+    const tempDir = path.resolve(__dirname, '../../temp_local_exec');
+    if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    let file = '';
+    let cmd = '';
+    let exeFile = '';
+
+    if (language === 'javascript') {
+        file = path.join(tempDir, `temp_${slug}_${Date.now()}.js`);
+        fs.writeFileSync(file, code);
+        cmd = `node "${file}"`;
+    } else if (language === 'python') {
+        file = path.join(tempDir, `temp_${slug}_${Date.now()}.py`);
+        fs.writeFileSync(file, code);
+        cmd = `python "${file}"`;
+    } else if (language === 'cpp') {
+        file = path.join(tempDir, `temp_${slug}_${Date.now()}.cpp`);
+        exeFile = path.join(tempDir, `temp_${slug}_${Date.now()}.exe`);
+        fs.writeFileSync(file, code);
+        try {
+            execSync(`g++ -O2 "${file}" -o "${exeFile}"`, { stdio: 'pipe', timeout: 15000 });
+            cmd = `"${exeFile}"`;
+        } catch (compileErr) {
+            return {
+                status: 'Compilation Error',
+                error: compileErr.stderr?.toString() || compileErr.message
+            };
+        }
+    } else {
+        return {
+            status: 'error',
+            error: `Local execution not supported for language: ${language}`
+        };
+    }
+
+    try {
+        const output = execSync(cmd, { input: input || '', encoding: 'utf-8', timeout: 5000 });
+        return {
+            status: 'Accepted',
+            output: output.trim(),
+            time: 50,
+            memory: 10240
+        };
+    } catch (runErr) {
+        if (runErr.message.includes('ETIMEDOUT')) {
+            return {
+                status: 'Time Limit Exceeded',
+                error: 'Time Limit Exceeded'
+            };
+        }
+        return {
+            status: 'Runtime Error (Other)',
+            error: runErr.stderr?.toString() || runErr.message
+        };
+    } finally {
+        try { if (file && fs.existsSync(file)) fs.unlinkSync(file); } catch (e) {}
+        try { if (exeFile && fs.existsSync(exeFile)) fs.unlinkSync(exeFile); } catch (e) {}
+    }
+};
+
 const executeCode = async (code, language, input, slug) => {
     try {
         let finalCode = code;
@@ -1042,7 +1203,6 @@ const executeCode = async (code, language, input, slug) => {
             finalCode = generateDriver(code, language, slug);
             if (language === 'java') {
                 console.log("[EXECUTOR] Java Driver Generated. Preview (Writing to file)");
-                // Fix: Write to root or temp, avoid 'server/' prefix which might be invalid relative to CWD
                 require('fs').writeFileSync('java_debug.java', finalCode);
                 if (finalCode.includes("public class Main")) console.log("[EXECUTOR] Main class found in generated code.");
                 else console.warn("[EXECUTOR] WARNING: Main class NOT FOUND in generated code (Correct for Piston)!");
@@ -1059,18 +1219,27 @@ const executeCode = async (code, language, input, slug) => {
             }
         }
 
-        // Try JDoodle first (free, no credit card required)
+        if (process.env.LOCAL_EXECUTION === 'true') {
+            console.log('[EXECUTOR] Using local mock execution');
+            return await executeLocally(finalCode, language, finalInput, slug);
+        }
+
+        // Try Judge0 CE/Self-hosted first if configured
+        const judge0Config = getJudge0Config();
+        if (judge0Config.apiUrl) {
+            console.log('[EXECUTOR] Using Judge0 CE backend');
+            const result = await executeWithJudge0(finalCode, language, finalInput);
+            if (result && result.status !== 'error') {
+                return result;
+            }
+            console.warn('[EXECUTOR] Judge0 execution failed or returned error, trying JDoodle fallback...', result?.error);
+        }
+
+        // Fallback to JDoodle (free, no credit card required)
         const jdoodleCreds = getJDoodleCredentials();
         if (jdoodleCreds.clientId && jdoodleCreds.clientSecret) {
             console.log('[EXECUTOR] Using JDoodle backend');
             return await executeWithJDoodle(finalCode, language, finalInput);
-        }
-
-        // Fallback to Judge0 CE
-        const judge0Config = getJudge0Config();
-        if (judge0Config.apiUrl) {
-            console.log('[EXECUTOR] Using Judge0 CE backend');
-            return await executeWithJudge0(finalCode, language, finalInput);
         }
 
         // No backend configured
@@ -1146,4 +1315,4 @@ const runTestCases = async (code, language, testCases, slug, userId) => {
     };
 };
 
-module.exports = { executeCode, runTestCases, LANGUAGE_IDS };
+module.exports = { executeCode, runTestCases, LANGUAGE_IDS, generateDriver };

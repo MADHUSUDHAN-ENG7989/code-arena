@@ -272,7 +272,7 @@ const PROBLEM_CONFIG = {
     'remove-duplicates-from-sorted-array': { fn: 'removeDuplicates', args: [{ type: 'int[]', name: 'nums' }], returnType: 'int' },
     'valid-anagram': { fn: 'isAnagram', args: [{ type: 'string', name: 's' }, { type: 'string', name: 't' }], returnType: 'boolean' },
     'maximum-subarray': { fn: 'maxSubArray', args: [{ type: 'int[]', name: 'nums' }], returnType: 'int' },
-    'merge-sorted-array': { fn: 'merge', args: [{ type: 'int[]', name: 'nums1' }, { type: 'int', name: 'm' }, { type: 'int[]', name: 'nums2' }, { type: 'int', name: 'n' }], returnType: 'void' },
+    'merge-sorted-arrays': { fn: 'merge', args: [{ type: 'int[]', name: 'nums1' }, { type: 'int[]', name: 'nums2' }], returnType: 'int[]' },
     'move-zeroes': { fn: 'moveZeroes', args: [{ type: 'int[]', name: 'nums' }], returnType: 'void' },
     'best-time-to-buy-and-sell-stock': { fn: 'maxProfit', args: [{ type: 'int[]', name: 'prices' }], returnType: 'int' },
     'length-of-last-word': { fn: 'lengthOfLastWord', args: [{ type: 'string', name: 's' }], returnType: 'int' },
