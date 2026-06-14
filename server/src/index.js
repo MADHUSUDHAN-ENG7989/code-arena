@@ -83,6 +83,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/social', require('./routes/social'));
 app.use('/api/notifications', require('./routes/notification'));
 app.use('/api/debug', require('./routes/debug'));
+app.use('/api/study-plan', require('./routes/studyPlan'));
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {

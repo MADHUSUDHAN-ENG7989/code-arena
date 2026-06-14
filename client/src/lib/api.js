@@ -102,4 +102,9 @@ export const socialAPI = {
     getPublicProfile: (userId) => api.get(`/social/profile/${userId}`),
 };
 
+// Study Plan API
+export const studyPlanAPI = {
+    get: () => api.get('/study-plan'),
+};
+
 export default api;
