@@ -5,7 +5,6 @@ import Navbar from './Navbar';
 import { useAuth } from '../contexts/AuthContext';
 import FirstLoginModal from './FirstLoginModal';
 import FullScreenPrompt from './FullScreenPrompt';
-import AICoachChatbot from './AICoachChatbot';
 
 const MainLayout = ({ children, minimal = false }) => {
     const { user } = useAuth();
@@ -121,7 +120,6 @@ const MainLayout = ({ children, minimal = false }) => {
                     </div>
                 </div>
             </div>
-            <AICoachChatbot />
         </div>
     );
 };
