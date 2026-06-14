@@ -31,7 +31,7 @@ async function main() {
         // Correct Two Sum Python solution
         const code = `
 class Solution:
-    def twoSum(self, nums: list[int], target: int) -> list[int]:
+    def two_sum(self, nums: list[int], target: int) -> list[int]:
         seen = {}
         for i, num in enumerate(nums):
             complement = target - num
