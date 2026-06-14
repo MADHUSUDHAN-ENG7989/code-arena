@@ -12,13 +12,20 @@ Code Arena is a premium, full-featured, LeetCode-style online coding platform. I
 
 ---
 
-## 🛠️ System Architecture & Execution Engine
+## 🛠️ System Architecture & Services
 
+### 3-Tier Code Execution Engine
 Code Arena uses a robust **3-Tier Code Execution Engine** designed to handle students' code submissions across multiple languages (JavaScript, Python, C++, Java, C):
 
 1. **Tier 1: Self-Hosted Judge0 (AWS EC2)**: The primary, high-performance compiler service hosted on a dedicated AWS EC2 instance.
 2. **Tier 2: JDoodle API (Cloud Fallback)**: If the EC2 instance is unreachable, the system automatically falls back to the JDoodle compiler API.
 3. **Tier 3: Local Server Execution (Fail-Safe)**: If all remote compilation services hit rate limits (e.g., JDoodle daily limit `429` errors) or are offline, the backend server executes submissions locally in a temp sandbox using the server's native compiler runtimes (`node`, `python3`, and `g++`).
+
+### Microservices & Managed Services
+To scale performance and keep execution robust, the platform leverages the following distributed services:
+* **In-Memory Caching (Redis Labs)**: Deployed on a managed Redis Cloud service to cache ranked leaderboards (weekly, monthly, and overall) and daily challenge stats, preventing database overhead.
+* **Database (MongoDB Atlas)**: A managed cloud database service storing user profiles, questions, test cases, and history.
+* **AI Code Complexity Analyzer (Groq Cloud API)**: Connects to Groq's high-speed inference microservice using `llama-3.3-70b-versatile` to provide students with instant, platform-grade feedback on space/time complexity, code quality, code smells, and actionable recommendations.
 
 ---
 
