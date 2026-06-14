@@ -12,7 +12,7 @@ async function check() {
         const lastQ = await Question.findOne().sort({ _id: -1 }); // or just find one
         console.log('Sample Question:', lastQ.title);
 
-        if (count === 54) {
+        if (count === 60) {
             console.log('VERIFICATION PASSED');
         } else {
             console.log('VERIFICATION FAILED: Count mismatch');

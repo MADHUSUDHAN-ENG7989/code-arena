@@ -276,6 +276,14 @@ const PROBLEM_CONFIG = {
     'move-zeroes': { fn: 'moveZeroes', args: [{ type: 'int[]', name: 'nums' }], returnType: 'void' },
     'best-time-to-buy-and-sell-stock': { fn: 'maxProfit', args: [{ type: 'int[]', name: 'prices' }], returnType: 'int' },
     'length-of-last-word': { fn: 'lengthOfLastWord', args: [{ type: 'string', name: 's' }], returnType: 'int' },
+
+    // Diverse topics (Linked Lists, Trees, Stacks, DP)
+    'climbing-stairs': { fn: 'climbStairs', args: [{ type: 'int', name: 'n' }], returnType: 'int' },
+    'reverse-linked-list': { fn: 'reverseList', args: [{ type: 'ListNode', name: 'head' }], returnType: 'ListNode' },
+    'merge-two-sorted-lists': { fn: 'mergeTwoLists', args: [{ type: 'ListNode', name: 'list1' }, { type: 'ListNode', name: 'list2' }], returnType: 'ListNode' },
+    'invert-binary-tree': { fn: 'invertTree', args: [{ type: 'TreeNode', name: 'root' }], returnType: 'TreeNode' },
+    'maximum-depth-of-binary-tree': { fn: 'maxDepth', args: [{ type: 'TreeNode', name: 'root' }], returnType: 'int' },
+    'evaluate-reverse-polish-notation': { fn: 'evalRPN', args: [{ type: 'string[]', name: 'tokens' }], returnType: 'int' },
 };
 
 module.exports = PROBLEM_CONFIG;

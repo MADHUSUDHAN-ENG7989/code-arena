@@ -425,7 +425,55 @@ const newQuestions = [
         ['1 <= nums.length <= 2 * 10^4'],
         [{ input: 'nums = [2,3,-2,4]', output: '6', explanation: '[2,3] has the largest product 6.' }, { input: 'nums = [-2,0,-1]', output: '0', explanation: 'The result cannot be 2, because [-2,-1] is not a subarray.' }],
         [{ input: '2 3 -2 4', output: '6' }, { input: '-2 0 -1', output: '0' }],
-        'maxProduct', [{ type: 'int[]', name: 'nums' }], 'int', ['Track max and min product'])
+        'maxProduct', [{ type: 'int[]', name: 'nums' }], 'int', ['Track max and min product']),
+
+    // 55. Climbing Stairs
+    createQuestion('Climbing Stairs', 'climbing-stairs', 'Easy', 'Dynamic Programming',
+        'You are climbing a staircase. It takes `n` steps to reach the top. Each time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top?',
+        ['1 <= n <= 45'],
+        [{ input: 'n = 2', output: '2', explanation: '1 step + 1 step, or 2 steps.' }, { input: 'n = 3', output: '3', explanation: '1+1+1, 1+2, or 2+1.' }],
+        [{ input: '2', output: '2' }, { input: '3', output: '3' }, { input: '4', output: '5' }, { input: '5', output: '8' }, { input: '6', output: '13' }],
+        'climbStairs', [{ type: 'int', name: 'n' }], 'int', ['Think DP or Fibonacci']),
+
+    // 56. Reverse Linked List
+    createQuestion('Reverse Linked List', 'reverse-linked-list', 'Easy', 'Linked List',
+        'Given the head of a singly linked list, reverse the list, and return the reversed list.',
+        ['The number of nodes in the list is the range [0, 5000].', '-5000 <= Node.val <= 5000'],
+        [{ input: 'head = [1,2,3,4,5]', output: '[5,4,3,2,1]', explanation: '' }],
+        [{ input: '1 2 3 4 5', output: '5 4 3 2 1' }, { input: '1 2', output: '2 1' }, { input: '1', output: '1' }],
+        'reverseList', [{ type: 'ListNode', name: 'head' }], 'ListNode', ['Use three pointers: prev, curr, next']),
+
+    // 57. Merge Two Sorted Lists
+    createQuestion('Merge Two Sorted Lists', 'merge-two-sorted-lists', 'Easy', 'Linked List',
+        'You are given the heads of two sorted linked lists `list1` and `list2`. Merge the two lists into one sorted list. The list should be made by splicing together the nodes of the first two lists. Return the head of the merged linked list.',
+        ['The number of nodes in both lists is in the range [0, 50].', '-100 <= Node.val <= 100', 'Both list1 and list2 are sorted in non-decreasing order.'],
+        [{ input: 'list1 = [1,2,4], list2 = [1,3,4]', output: '[1,1,2,3,4,4]', explanation: '' }],
+        [{ input: '1 2 4\n1 3 4', output: '1 1 2 3 4 4' }, { input: '', output: '' }, { input: '\n0', output: '0' }],
+        'mergeTwoLists', [{ type: 'ListNode', name: 'list1' }, { type: 'ListNode', name: 'list2' }], 'ListNode', ['Use recursion or dynamic dummy node']),
+
+    // 58. Invert Binary Tree
+    createQuestion('Invert Binary Tree', 'invert-binary-tree', 'Easy', 'Binary Tree',
+        'Given the root of a binary tree, invert the tree, and return its root.',
+        ['The number of nodes in the tree is in the range [0, 100].', '-100 <= Node.val <= 100'],
+        [{ input: 'root = [4,2,7,1,3,6,9]', output: '[4,7,2,9,6,3,1]', explanation: '' }],
+        [{ input: '4 2 7 1 3 6 9', output: '4 7 2 9 6 3 1' }, { input: '2 1 3', output: '2 3 1' }, { input: '', output: '' }],
+        'invertTree', [{ type: 'TreeNode', name: 'root' }], 'TreeNode', ['Use recursion to swap left and right subtrees']),
+
+    // 59. Maximum Depth of Binary Tree
+    createQuestion('Maximum Depth of Binary Tree', 'maximum-depth-of-binary-tree', 'Easy', 'Binary Tree',
+        'Given the root of a binary tree, return its maximum depth. A binary tree\'s maximum depth is the number of nodes along the longest path from the root node down to the farthest leaf node.',
+        ['The number of nodes in the tree is in the range [0, 10^4].', '-100 <= Node.val <= 100'],
+        [{ input: 'root = [3,9,20,null,null,15,7]', output: '3', explanation: '' }],
+        [{ input: '3 9 20 null null 15 7', output: '3' }, { input: '1 null 2', output: '2' }, { input: '', output: '0' }],
+        'maxDepth', [{ type: 'TreeNode', name: 'root' }], 'int', ['Use recursion, max(left, right) + 1']),
+
+    // 60. Evaluate Reverse Polish Notation
+    createQuestion('Evaluate Reverse Polish Notation', 'evaluate-reverse-polish-notation', 'Medium', 'Stack',
+        'Evaluate the value of an arithmetic expression in Reverse Polish Notation. Valid operators are `+`, `-`, `*`, and `/`. Each operand may be an integer or another expression.',
+        ['1 <= tokens.length <= 10^4', 'tokens[i] is either an operator or an integer'],
+        [{ input: 'tokens = ["2","1","+","3","*"]', output: '9', explanation: '((2 + 1) * 3) = 9' }],
+        [{ input: '2 1 + 3 *', output: '9' }, { input: '4 13 5 / +', output: '6' }, { input: '10 6 9 3 + -11 * / * 17 + 5 +', output: '22' }],
+        'evalRPN', [{ type: 'string[]', name: 'tokens' }], 'int', ['Use a stack to keep track of operands'])
 
 ];
 
