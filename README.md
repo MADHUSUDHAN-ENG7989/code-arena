@@ -8,7 +8,7 @@ Code Arena is a premium, full-featured, LeetCode-style online coding platform. I
 
 * **Frontend Client (Vercel)**: Deployed statically via Vercel.
 * **Backend Server (Render)**: Deployed at [https://code-arena-api-5am7.onrender.com](https://code-arena-api-5am7.onrender.com) (Subject to cold starts on the free tier).
-* **Primary Code Execution Engine (Judge0 CE on AWS EC2)**: Hosted on a dedicated EC2 instance at [http://quokkaa.duckdns.org:2358](http://quokkaa.duckdns.org:2358).
+* **Primary Code Execution Engine (Judge0 CE on AWS EC2)**: Hosted on a dedicated, self-managed AWS EC2 instance.
 
 ---
 
@@ -16,7 +16,7 @@ Code Arena is a premium, full-featured, LeetCode-style online coding platform. I
 
 Code Arena uses a robust **3-Tier Code Execution Engine** designed to handle students' code submissions across multiple languages (JavaScript, Python, C++, Java, C):
 
-1. **Tier 1: Self-Hosted Judge0 (AWS EC2)**: The primary, high-performance compiler service hosted on an AWS EC2 instance (`http://quokkaa.duckdns.org:2358`).
+1. **Tier 1: Self-Hosted Judge0 (AWS EC2)**: The primary, high-performance compiler service hosted on a dedicated AWS EC2 instance.
 2. **Tier 2: JDoodle API (Cloud Fallback)**: If the EC2 instance is unreachable, the system automatically falls back to the JDoodle compiler API.
 3. **Tier 3: Local Server Execution (Fail-Safe)**: If all remote compilation services hit rate limits (e.g., JDoodle daily limit `429` errors) or are offline, the backend server executes submissions locally in a temp sandbox using the server's native compiler runtimes (`node`, `python3`, and `g++`).
 
@@ -110,7 +110,7 @@ Create a `.env` file in the `server` directory:
 PORT=5000
 MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret_key
-JUDGE0_API_URL=http://quokkaa.duckdns.org:2358
+JUDGE0_API_URL=your_judge0_api_url
 JDOODLE_CLIENT_ID=your_jdoodle_id
 JDOODLE_CLIENT_SECRET=your_jdoodle_secret
 NODE_ENV=development
