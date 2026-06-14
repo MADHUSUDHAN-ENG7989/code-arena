@@ -64,15 +64,6 @@ const Navbar = ({ minimal = false }) => {
                                     Leaderboard
                                 </Link>
 
-                                <Link
-                                    to="/study-plan"
-                                    className={`text-sm font-medium transition-colors ${isActive('/study-plan')}`}
-                                >
-                                    Study Plan
-                                </Link>
-
-
-
                                 {isAdmin && (
                                     <Link
                                         to="/admin"

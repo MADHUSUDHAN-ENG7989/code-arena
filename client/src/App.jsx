@@ -15,7 +15,6 @@ import UserProfile from './pages/UserProfile';
 import ArenaLobby from './pages/ArenaLobby';
 import ArenaRoom from './pages/ArenaRoom';
 import Leaderboard from './pages/Leaderboard';
-import StudyPlan from './pages/StudyPlan';
 import AdminDashboard from './pages/AdminDashboard';
 import MeetTheDeveloper from './pages/MeetTheDeveloper';
 import InvitationListener from './components/InvitationListener';
@@ -144,15 +143,6 @@ function AppRoutes() {
                     element={
                         <ProtectedRoute>
                             <Leaderboard />
-                        </ProtectedRoute>
-                    }
-                />
-
-                <Route
-                    path="/study-plan"
-                    element={
-                        <ProtectedRoute>
-                            <StudyPlan />
                         </ProtectedRoute>
                     }
                 />
