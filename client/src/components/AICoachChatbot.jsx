@@ -81,39 +81,41 @@ const AICoachChatbot = () => {
     };
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 font-sans">
+        <>
             {/* FLOATING ACTION BUTTON */}
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={`relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/30 border border-white/10 hover:scale-105 active:scale-95 transition-all duration-300 ${
-                    isOpen ? 'rotate-90' : ''
-                }`}
-                title="AI Study Coach"
-            >
-                {/* Pulsing ring around button */}
-                <span className="absolute -inset-1 rounded-full bg-indigo-500/20 animate-ping opacity-75"></span>
-                
-                {isOpen ? (
-                    <FaTimes className="text-xl" />
-                ) : (
-                    <div className="relative">
-                        <FaRobot className="text-2xl" />
-                        <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-pink-500 border border-slate-950 items-center justify-center text-[7px] font-bold text-white">
-                                SP
+            <div className="fixed bottom-6 right-6 z-50 font-sans">
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className={`relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/30 border border-white/10 hover:scale-105 active:scale-95 transition-all duration-300 ${
+                        isOpen ? 'rotate-90' : ''
+                    }`}
+                    title="AI Study Coach"
+                >
+                    {/* Pulsing ring around button */}
+                    <span className="absolute -inset-1 rounded-full bg-indigo-500/20 animate-ping opacity-75"></span>
+                    
+                    {isOpen ? (
+                        <FaTimes className="text-xl" />
+                    ) : (
+                        <div className="relative">
+                            <FaRobot className="text-2xl" />
+                            <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-pink-500 border border-slate-950 items-center justify-center text-[7px] font-bold text-white">
+                                    SP
+                                </span>
                             </span>
-                        </span>
-                    </div>
-                )}
-            </button>
+                        </div>
+                    )}
+                </button>
+            </div>
 
             {/* FLOATING WINDOW */}
             <div
-                className={`absolute bottom-20 right-0 w-[92vw] md:w-[850px] max-w-[calc(100vw-2rem)] h-[680px] max-h-[calc(100vh-6rem)] bg-[#0F172A]/95 backdrop-blur-xl rounded-2xl border border-indigo-500/30 flex flex-col shadow-[0_0_30px_rgba(99,102,241,0.4)] transition-all duration-300 transform origin-bottom-right ${
+                className={`absolute top-0 right-0 w-full h-[580px] bg-[#0F172A]/98 backdrop-blur-xl rounded-3xl border border-indigo-500/35 flex flex-col shadow-[0_0_35px_rgba(99,102,241,0.45)] transition-all duration-300 transform origin-top-right z-40 ${
                     isOpen
                         ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
-                        : 'opacity-0 translate-y-10 scale-95 pointer-events-none'
+                        : 'opacity-0 -translate-y-4 scale-95 pointer-events-none'
                 }`}
             >
                 {/* Header */}
@@ -347,7 +349,7 @@ const AICoachChatbot = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </>
     );
 };
 

@@ -116,12 +116,12 @@ const MainLayout = ({ children, minimal = false }) => {
                     )}
 
                     {/* RIGHT COLUMN: Content (8 cols) */}
-                    <div className={`${minimal ? 'lg:col-span-1 md:mx-auto md:max-w-4xl' : 'lg:col-span-8'} w-full`}>
+                    <div className={`${minimal ? 'lg:col-span-1 md:mx-auto md:max-w-4xl' : 'lg:col-span-8'} w-full relative`}>
                         {children}
+                        <AICoachChatbot />
                     </div>
                 </div>
             </div>
-            <AICoachChatbot />
         </div>
     );
 };

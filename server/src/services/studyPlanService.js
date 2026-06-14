@@ -257,8 +257,8 @@ async function scraperNode(state) {
         queryTopic = weakTopics[0];
     }
 
-    // Tavily search targeting YouTube for "take U forward" channel
-    const searchQuery = `site:youtube.com "take u forward" ${queryTopic} ${queryTitle}`;
+    // General Tavily search targeting YouTube for the topic and problem
+    const searchQuery = `site:youtube.com ${queryTopic} ${queryTitle} DSA coding tutorial`;
     const resources = [];
 
     // Helper to get fallback matching the topic
@@ -288,29 +288,36 @@ async function scraperNode(state) {
             api_key: apiKey,
             query: searchQuery,
             search_depth: 'basic',
-            max_results: 6
+            max_results: 8
         }, { timeout: 7000 });
 
         if (response.data && response.data.results && response.data.results.length > 0) {
             const results = response.data.results;
             
-            // Filter strictly for YouTube URLs and check if they relate to Take U Forward
+            // Filter all YouTube URLs
             const youtubeResults = results.filter(r => {
                 const url = r.url || '';
-                const isYT = url.includes('youtube.com') || url.includes('youtu.be');
-                // Ensure it is related to take u forward or striver
-                const textMatch = (r.title || '').toLowerCase() + ' ' + (r.content || '').toLowerCase();
-                const isStriver = textMatch.includes('take u forward') || 
-                                  textMatch.includes('takeuforward') || 
-                                  textMatch.includes('striver');
-                return isYT && isStriver;
+                return url.includes('youtube.com') || url.includes('youtu.be');
+            });
+
+            // Prioritize/sort Striver (take U forward) videos at the top
+            youtubeResults.sort((a, b) => {
+                const textA = ((a.title || '') + ' ' + (a.content || '')).toLowerCase();
+                const textB = ((b.title || '') + ' ' + (b.content || '')).toLowerCase();
+                
+                const isStriverA = textA.includes('take u forward') || textA.includes('takeuforward') || textA.includes('striver');
+                const isStriverB = textB.includes('take u forward') || textB.includes('takeuforward') || textB.includes('striver');
+                
+                if (isStriverA && !isStriverB) return -1;
+                if (!isStriverA && isStriverB) return 1;
+                return 0;
             });
 
             for (const r of youtubeResults) {
                 const videoId = getYouTubeId(r.url);
                 if (videoId && resources.length < 3) {
                     resources.push({
-                        title: r.title || 'take U forward Class',
+                        title: r.title || 'Coding Lecture',
                         url: r.url,
                         thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
                         description: r.content || 'Step-by-step programming solution tutorial.'
