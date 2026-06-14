@@ -1150,10 +1150,18 @@ const executeLocally = async (code, language, input, slug) => {
     } else if (language === 'python') {
         file = path.join(tempDir, `temp_${slug}_${Date.now()}.py`);
         fs.writeFileSync(file, code);
-        cmd = `python "${file}"`;
+        // Robust Python command selection: try python3 first, fallback to python
+        try {
+            execSync('python3 --version', { stdio: 'ignore' });
+            cmd = `python3 "${file}"`;
+        } catch (e) {
+            cmd = `python "${file}"`;
+        }
     } else if (language === 'cpp') {
+        const isWin = process.platform === 'win32';
+        const exeExt = isWin ? '.exe' : '';
         file = path.join(tempDir, `temp_${slug}_${Date.now()}.cpp`);
-        exeFile = path.join(tempDir, `temp_${slug}_${Date.now()}.exe`);
+        exeFile = path.join(tempDir, `temp_${slug}_${Date.now()}${exeExt}`);
         fs.writeFileSync(file, code);
         try {
             execSync(`g++ -O2 "${file}" -o "${exeFile}"`, { stdio: 'pipe', timeout: 15000 });
@@ -1237,17 +1245,19 @@ const executeCode = async (code, language, input, slug) => {
 
         // Fallback to JDoodle (free, no credit card required)
         const jdoodleCreds = getJDoodleCredentials();
+        let jdoodleResult = null;
         if (jdoodleCreds.clientId && jdoodleCreds.clientSecret) {
             console.log('[EXECUTOR] Using JDoodle backend');
-            return await executeWithJDoodle(finalCode, language, finalInput);
+            jdoodleResult = await executeWithJDoodle(finalCode, language, finalInput);
+            if (jdoodleResult && jdoodleResult.status !== 'error') {
+                return jdoodleResult;
+            }
+            console.warn('[EXECUTOR] JDoodle execution failed or returned error, trying local execution fallback...', jdoodleResult?.error);
         }
 
-        // No backend configured
-        console.error('[EXECUTOR] No code execution backend configured! Set JDOODLE_CLIENT_ID/SECRET or JUDGE0_API_URL');
-        return {
-            status: 'error',
-            error: 'Code execution service is not configured. Please contact the administrator.'
-        };
+        // Fallback to local execution as the final safeguard
+        console.log('[EXECUTOR] Falling back to local execution...');
+        return await executeLocally(finalCode, language, finalInput, slug);
 
     } catch (error) {
         console.error('Code execution error:', error);
