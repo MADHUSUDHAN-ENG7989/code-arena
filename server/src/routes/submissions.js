@@ -160,13 +160,14 @@ router.post('/submit', authMiddleware, async (req, res) => {
             if (!user.solvedQuestions.includes(question._id)) {
                 user.solvedQuestions.push(question._id);
 
-                // Award points based on difficulty
-                const points = {
+                // Award points based on the question's custom points, or fallback to difficulty-based points
+                const difficultyPoints = {
                     'Easy': 10,
                     'Medium': 20,
                     'Hard': 30,
                 };
-                user.score += points[question.difficulty] || 10;
+                const pointsAwarded = question.points || difficultyPoints[question.difficulty] || 10;
+                user.score += pointsAwarded;
 
                 await user.save();
             }

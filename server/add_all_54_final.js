@@ -489,6 +489,35 @@ async function seed() {
 
         console.log('Upserting questions to preserve User history...');
         for (const q of allQuestions) {
+            // Calculate points fairly based on difficulty and exact question complexity
+            let points = 10;
+            if (q.difficulty === 'Easy') {
+                const basicEasy = ['single-number', 'fizz-buzz', 'pangram-sentence', 'truncate-sentence'];
+                const standardEasy = ['two-sum', 'contains-duplicate', 'valid-palindrome', 'reverse-string', 'reverse-linked-list', 'climbing-stairs', 'maximum-depth-of-binary-tree', 'length-of-last-word'];
+                if (basicEasy.includes(q.slug)) {
+                    points = 10;
+                } else if (standardEasy.includes(q.slug)) {
+                    points = 15;
+                } else {
+                    points = 20;
+                }
+            } else if (q.difficulty === 'Medium') {
+                const standardMedium = ['merge-sorted-arrays', 'best-time-to-buy-and-sell-stock', 'product-of-array-except-self', 'subarray-sum-equals-k', 'increasing-triplet-subsequence', 'partition-labels', 'find-all-duplicates-in-an-array', 'find-peak-element'];
+                if (standardMedium.includes(q.slug)) {
+                    points = 30;
+                } else {
+                    points = 40;
+                }
+            } else if (q.difficulty === 'Hard') {
+                const standardHard = ['longest-substring-without-repeating-characters', 'longest-palindromic-substring', 'word-search', 'maximum-product-subarray'];
+                if (standardHard.includes(q.slug)) {
+                    points = 60;
+                } else {
+                    points = 80;
+                }
+            }
+            q.points = points;
+
             await Question.findOneAndUpdate(
                 { slug: q.slug },
                 q,
