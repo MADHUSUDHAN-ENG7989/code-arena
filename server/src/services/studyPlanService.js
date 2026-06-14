@@ -1,10 +1,12 @@
+const { StateGraph, START, END } = require('@langchain/langgraph');
 const axios = require('axios');
+const OpenAI = require('openai');
 const Submission = require('../models/Submission');
 const Question = require('../models/Question');
 const User = require('../models/User');
-const OpenAI = require('openai');
+const { searchSimilarQuestions } = require('./pineconeService');
 
-// Initialize Groq helper (if API key is present)
+// Initialize Groq / OpenAI helper for narrative generation
 const getGroq = () => {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) return null;
@@ -15,125 +17,95 @@ const getGroq = () => {
 };
 
 /**
- * Perform a web search for tutorials using Tavily Search API.
- * Falls back gracefully to structured queries if the API key is not configured or fails.
+ * Extracts the 11-character YouTube video ID from a URL.
  */
-async function searchResources(query, questionTitle) {
-    const apiKey = process.env.TAVILY_API_KEY;
-    
-    // Fallback search results if key is missing or is placeholder
-    const getFallback = () => [
-        {
-            title: `YouTube Walkthrough: How to solve "${questionTitle}"`,
-            url: `https://www.youtube.com/results?search_query=solve+${encodeURIComponent(questionTitle)}+dsa+tutorial`,
-            content: `Watch visual video lectures showing optimal visual code walkthroughs and complexity analysis for ${questionTitle}.`
-        },
-        {
-            title: `GeeksForGeeks: "${questionTitle}" Problem Discussion`,
-            url: `https://www.google.com/search?q=site:geeksforgeeks.org+${encodeURIComponent(questionTitle)}`,
-            content: `Read standard editorial explanations, optimal pseudocode, and dry-runs on GeeksforGeeks for "${questionTitle}".`
-        },
-        {
-            title: `LeetCode Discuss: Optimal solutions for "${questionTitle}"`,
-            url: `https://leetcode.com/problemset/all/?search=${encodeURIComponent(questionTitle)}`,
-            content: `Browse community-vetted solutions, optimizations, and common patterns shared by developers.`
-        }
-    ];
-
-    if (!apiKey || apiKey === 'tvly-placeholder-key' || apiKey.startsWith('tvly-placeholder')) {
-        console.log(`[STUDY-PLAN] Using mock Tavily resources for: ${questionTitle}`);
-        return getFallback();
-    }
-
-    try {
-        console.log(`[STUDY-PLAN] Querying Tavily API for: "${query}"`);
-        const response = await axios.post('https://api.tavily.com/search', {
-            api_key: apiKey,
-            query: query,
-            search_depth: 'basic',
-            max_results: 3
-        }, { timeout: 8000 });
-
-        if (response.data && response.data.results && response.data.results.length > 0) {
-            return response.data.results.map(r => ({
-                title: r.title || 'Educational Resource',
-                url: r.url || '#',
-                content: r.content || 'Video lecture or step-by-step DSA guide.'
-            }));
-        }
-        return getFallback();
-    } catch (e) {
-        console.warn(`[STUDY-PLAN] Tavily query failed (${e.message}), falling back...`);
-        return getFallback();
-    }
+function getYouTubeId(url) {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
 }
 
+// Fallback high-quality Striver (take U forward) videos for standard topics
+const STRIVER_FALLBACK_VIDEOS = {
+    'Arrays': {
+        title: 'Striver\'s Arrays playlist - DSA Course',
+        url: 'https://www.youtube.com/watch?v=37E9ckMDdTk',
+        videoId: '37E9ckMDdTk'
+    },
+    'Basic Math': {
+        title: 'Striver\'s Basic Math for Coding',
+        url: 'https://www.youtube.com/watch?v=1XtVaoODky4',
+        videoId: '1XtVaoODky4'
+    },
+    'Recursion': {
+        title: 'Striver\'s Recursion Playlist - Lecture 1',
+        url: 'https://www.youtube.com/watch?v=yVdKa8dnKiE',
+        videoId: 'yVdKa8dnKiE'
+    },
+    'Binary Search': {
+        title: 'Striver\'s Binary Search Playlist',
+        url: 'https://www.youtube.com/watch?v=COKCOaF8Rco',
+        videoId: 'COKCOaF8Rco'
+    },
+    'Strings': {
+        title: 'Striver\'s Strings Series playlist',
+        url: 'https://www.youtube.com/watch?v=gM89Z5T9a4Y',
+        videoId: 'gM89Z5T9a4Y'
+    },
+    'Linked Lists': {
+        title: 'Striver\'s Linked List Series',
+        url: 'https://www.youtube.com/watch?v=q5a5sOcO3Fc',
+        videoId: 'q5a5sOcO3Fc'
+    },
+    'Stacks & Queues': {
+        title: 'Striver\'s Stack & Queue playlist',
+        url: 'https://www.youtube.com/watch?v=mJW5YKjK2u0',
+        videoId: 'mJW5YKjK2u0'
+    },
+    'Trees': {
+        title: 'Striver\'s Binary Tree playlist',
+        url: 'https://www.youtube.com/watch?v=StQc0T3xV1U',
+        videoId: 'StQc0T3xV1U'
+    },
+    'Graphs': {
+        title: 'Striver\'s Graph Series playlist',
+        url: 'https://www.youtube.com/watch?v=ia1tUrDFuOR',
+        videoId: 'ia1tUrDFuOR'
+    },
+    'Dynamic Programming': {
+        title: 'Striver\'s DP Course playlist',
+        url: 'https://www.youtube.com/watch?v=FfGPlyHFsIz',
+        videoId: 'FfGPlyHFsIz'
+    },
+    'Greedy': {
+        title: 'Striver\'s Greedy Algorithms playlist',
+        url: 'https://www.youtube.com/watch?v=DIX2p7gT6w0',
+        videoId: 'DIX2p7gT6w0'
+    }
+};
+
 /**
- * Generates a personalized study plan for a student.
+ * Node 1: Analyzer
+ * Analyzes the student's submission history and identifies weak topics and failed questions.
  */
-async function generateStudyPlan(userId) {
+async function analyzerNode(state) {
+    const { userId } = state;
+    console.log(`[LANGGRAPH-AGENT] [Analyzer] Reviewing performance for user: ${userId}`);
+
     const user = await User.findById(userId);
     if (!user) {
-        throw new Error('User not found');
+        throw new Error(`User not found: ${userId}`);
     }
 
-    // 1. Fetch all submissions by user
     const submissions = await Submission.find({ userId }).populate('questionId');
-    
-    // Get all questions to find unsolved ones
     const allQuestions = await Question.find({});
     
-    // Map to find solved questions
     const solvedQuestionIds = new Set(
-        submissions.filter(s => s.verdict === 'Accepted').map(s => s.questionId?._id?.toString())
+        submissions.filter(s => s.verdict === 'Accepted' && s.questionId).map(s => s.questionId._id.toString())
     );
 
-    // Edge Case A: No submissions at all
-    if (submissions.length === 0) {
-        const starterSlugs = ['two-sum', 'plus-one', 'climbing-stairs', 'reverse-linked-list'];
-        const recommendedStarter = allQuestions.filter(q => starterSlugs.includes(q.slug));
-        
-        // Fetch resources for general coding starter topics
-        const resources = await searchResources(
-            "learn arrays and strings and linked lists coding classes video tutorials", 
-            "Data Structures & Algorithms Basics"
-        );
-
-        const motivation = "Welcome to Code Arena! It looks like you haven't attempted any challenges yet. Let's start with basic Data Structures and Algorithms. Below are starter video classes and a custom practice sequence to build your confidence.";
-
-        return {
-            status: 'new_user',
-            motivation,
-            weakTopics: ['Arrays', 'Basic Math', 'Linked Lists'],
-            resources,
-            recommendedQuestions: recommendedStarter.map(q => ({
-                _id: q._id,
-                title: q.title,
-                slug: q.slug,
-                difficulty: q.difficulty,
-                topic: q.topic,
-                points: q.points
-            }))
-        };
-    }
-
-    // Edge Case B: 100% solved (Master User)
-    if (solvedQuestionIds.size === allQuestions.length) {
-        const resources = await searchResources(
-            "advanced competitive programming dynamic programming tree algorithms lectures", 
-            "Advanced Algorithms"
-        );
-
-        return {
-            status: 'master_user',
-            motivation: "Incredible! You have solved every single challenge in Code Arena! You have mastered the platform. To keep learning, explore advanced topics like dynamic programming optimizations, segment trees, and hard competitive programming lectures below.",
-            weakTopics: [],
-            resources,
-            recommendedQuestions: []
-        };
-    }
-
-    // 2. Identify errors and weak areas
+    // Identify failures/weak topics
     const failedSubmissions = submissions.filter(s => s.verdict !== 'Accepted' && s.questionId);
     
     const topicFailures = {};
@@ -152,26 +124,53 @@ async function generateStudyPlan(userId) {
         };
     });
 
-    // Find if they have no failed submissions, but have attempted and solved everything they tried
-    if (failedSubmissions.length === 0) {
-        // Advanced user: has solved everything they tried, but hasn't solved everything yet
-        const unsolved = allQuestions.filter(q => !solvedQuestionIds.has(q._id.toString()));
-        // Recommend unsolved sorted by points (easier first)
-        unsolved.sort((a, b) => (a.points || 10) - (b.points || 10));
-        const nextQuestions = unsolved.slice(0, 4);
+    const weakestTopics = Object.entries(topicFailures)
+        .sort((a, b) => b[1] - a[1])
+        .map(entry => entry[0]);
 
-        const nextTopic = nextQuestions[0]?.topic || 'Advanced Topics';
-        const resources = await searchResources(
-            `best tutorial lectures for ${nextTopic} dsa coding`, 
-            nextTopic
-        );
+    const mostFailedQuestions = Object.values(questionFailures)
+        .sort((a, b) => b.count - a.count);
 
+    // Determine status
+    let status = 'needs_practice';
+    if (submissions.length === 0) {
+        status = 'new_user';
+    } else if (solvedQuestionIds.size === allQuestions.length) {
+        status = 'master_user';
+    } else if (failedSubmissions.length === 0) {
+        status = 'advanced_user';
+    }
+
+    return {
+        submissions,
+        allQuestions,
+        solvedQuestionIds,
+        weakTopics: weakestTopics.slice(0, 3),
+        status,
+        meta: {
+            topFailedQ: mostFailedQuestions[0] || null,
+            topTopic: weakestTopics[0] || null
+        }
+    };
+}
+
+/**
+ * Node 2: Retriever (Semantic search with Pinecone)
+ * Fetches recommended questions that target the student's weakest topics.
+ */
+async function retrieverNode(state) {
+    const { status, weakTopics, solvedQuestionIds, allQuestions, meta } = state;
+    console.log(`[LANGGRAPH-AGENT] [Retriever] Fetching practice questions. Status: ${status}`);
+
+    if (status === 'master_user') {
+        return { recommendedQuestions: [] };
+    }
+
+    if (status === 'new_user') {
+        const starterSlugs = ['two-sum', 'plus-one', 'climbing-stairs', 'reverse-linked-list'];
+        const starterQuestions = allQuestions.filter(q => starterSlugs.includes(q.slug));
         return {
-            status: 'advanced_user',
-            motivation: "Great job! You have accepted solutions for all questions you attempted so far. Let's keep the momentum going by exploring new topics and challenges you haven't solved yet.",
-            weakTopics: [],
-            resources,
-            recommendedQuestions: nextQuestions.map(q => ({
+            recommendedQuestions: starterQuestions.map(q => ({
                 _id: q._id,
                 title: q.title,
                 slug: q.slug,
@@ -182,29 +181,39 @@ async function generateStudyPlan(userId) {
         };
     }
 
-    // 3. Identify weakest topics & failed questions
-    const weakestTopics = Object.entries(topicFailures)
-        .sort((a, b) => b[1] - a[1])
-        .map(entry => entry[0]);
+    // Standard or Advanced User recommendation logic
+    let targetConcept = 'easiest unsolved standard programming data structures challenges';
+    if (meta && meta.topFailedQ) {
+        targetConcept = `optimal solution and problems similar to ${meta.topFailedQ.title} in topic ${meta.topTopic}`;
+    } else if (weakTopics && weakTopics.length > 0) {
+        targetConcept = `fundamental DSA challenges on ${weakTopics.join(', ')}`;
+    }
 
-    const mostFailedQuestions = Object.values(questionFailures)
-        .sort((a, b) => b.count - a.count);
-
-    // Pick top failed question for resource scraping
-    const topFailedQ = mostFailedQuestions[0];
-    const topTopic = weakestTopics[0];
-
-    // Scrape resources using Tavily with the question title and topic
-    const searchTopicQuery = `best coding video lectures tutorials for topic ${topTopic} dsa ${topFailedQ.title}`;
-    const resources = await searchResources(searchTopicQuery, topFailedQ.title);
-
-    // 4. Determine DSA questions to practice next (Weak topics, unsolved, sorted by difficulty)
+    // Retrieve similar questions using Pinecone (falls back to local text query)
+    const pineconeMatches = await searchSimilarQuestions(targetConcept, 10);
     const recommendedQuestions = [];
-    
-    // Sort all questions: Easy first, then Medium, then Hard
+
+    // Filter out already solved questions
+    for (const match of pineconeMatches) {
+        if (!solvedQuestionIds.has(match.id)) {
+            // Find full details from the allQuestions list
+            const fullQ = allQuestions.find(q => q._id.toString() === match.id);
+            if (fullQ && recommendedQuestions.length < 5) {
+                recommendedQuestions.push({
+                    _id: fullQ._id,
+                    title: fullQ.title,
+                    slug: fullQ.slug,
+                    difficulty: fullQ.difficulty,
+                    topic: fullQ.topic,
+                    points: fullQ.points
+                });
+            }
+        }
+    }
+
+    // Fallback: If still have space, add general easiest unsolved questions
     const difficultyWeight = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
     const candidates = allQuestions.filter(q => !solvedQuestionIds.has(q._id.toString()));
-    
     candidates.sort((a, b) => {
         const diffA = difficultyWeight[a.difficulty] || 1;
         const diffB = difficultyWeight[b.difficulty] || 1;
@@ -212,61 +221,227 @@ async function generateStudyPlan(userId) {
         return (a.points || 10) - (b.points || 10);
     });
 
-    // First, push unsolved questions belonging to the user's weakest topics
     candidates.forEach(q => {
-        if (weakestTopics.includes(q.topic) && recommendedQuestions.length < 5) {
-            recommendedQuestions.push(q);
+        if (recommendedQuestions.length < 5 && !recommendedQuestions.some(rq => rq.slug === q.slug)) {
+            recommendedQuestions.push({
+                _id: q._id,
+                title: q.title,
+                slug: q.slug,
+                difficulty: q.difficulty,
+                topic: q.topic,
+                points: q.points
+            });
         }
     });
 
-    // If still have space, add general easiest unsolved questions
-    candidates.forEach(q => {
-        if (!recommendedQuestions.includes(q) && recommendedQuestions.length < 5) {
-            recommendedQuestions.push(q);
-        }
-    });
+    return { recommendedQuestions };
+}
 
-    // 5. Generate LLM Narrative summary
-    let motivation = `Based on your analysis, you have encountered difficulties with **${topTopic}** algorithms (specifically on "${topFailedQ.title}", where you made ${topFailedQ.count} failed attempts). We highly recommend you review the classes below, then return to practice the suggested list in sequence.`;
+/**
+ * Node 3: Scraper (Tavily YouTube scraper for take U forward)
+ * Searches Tavily for YouTube lectures, filters them, and extracts thumbnails.
+ */
+async function scraperNode(state) {
+    const { status, weakTopics, meta } = state;
+    const apiKey = process.env.TAVILY_API_KEY;
+
+    console.log('[LANGGRAPH-AGENT] [Scraper] Scraping YouTube videos from take U forward...');
+
+    // Identify topic or question to query
+    let queryTopic = 'Arrays';
+    let queryTitle = 'Coding Interview Prep';
+    if (meta && meta.topFailedQ) {
+        queryTopic = meta.topTopic || 'DSA';
+        queryTitle = meta.topFailedQ.title;
+    } else if (weakTopics && weakTopics.length > 0) {
+        queryTopic = weakTopics[0];
+    }
+
+    // Tavily search targeting YouTube for "take U forward" channel
+    const searchQuery = `site:youtube.com "take u forward" ${queryTopic} ${queryTitle}`;
+    const resources = [];
+
+    // Helper to get fallback matching the topic
+    const getFallbackVideo = (topic) => {
+        // Find closest fallback topic key
+        const key = Object.keys(STRIVER_FALLBACK_VIDEOS).find(
+            t => topic.toLowerCase().includes(t.toLowerCase()) || t.toLowerCase().includes(topic.toLowerCase())
+        );
+        return STRIVER_FALLBACK_VIDEOS[key] || STRIVER_FALLBACK_VIDEOS['Arrays'];
+    };
+
+    if (!apiKey || apiKey.includes('placeholder')) {
+        console.log('[LANGGRAPH-AGENT] [Scraper] Missing Tavily API Key. Using fallback Striver resource.');
+        const fallback = getFallbackVideo(queryTopic);
+        resources.push({
+            title: fallback.title,
+            url: fallback.url,
+            thumbnail: `https://img.youtube.com/vi/${fallback.videoId}/mqdefault.jpg`,
+            description: `Official comprehensive video tutorial from take U forward channel to master ${queryTopic} algorithms.`
+        });
+        return { resources };
+    }
+
+    try {
+        console.log(`[LANGGRAPH-AGENT] [Scraper] Fetching Tavily search: "${searchQuery}"`);
+        const response = await axios.post('https://api.tavily.com/search', {
+            api_key: apiKey,
+            query: searchQuery,
+            search_depth: 'basic',
+            max_results: 6
+        }, { timeout: 7000 });
+
+        if (response.data && response.data.results && response.data.results.length > 0) {
+            const results = response.data.results;
+            
+            // Filter strictly for YouTube URLs and check if they relate to Take U Forward
+            const youtubeResults = results.filter(r => {
+                const url = r.url || '';
+                const isYT = url.includes('youtube.com') || url.includes('youtu.be');
+                // Ensure it is related to take u forward or striver
+                const textMatch = (r.title || '').toLowerCase() + ' ' + (r.content || '').toLowerCase();
+                const isStriver = textMatch.includes('take u forward') || 
+                                  textMatch.includes('takeuforward') || 
+                                  textMatch.includes('striver');
+                return isYT && isStriver;
+            });
+
+            for (const r of youtubeResults) {
+                const videoId = getYouTubeId(r.url);
+                if (videoId && resources.length < 3) {
+                    resources.push({
+                        title: r.title || 'take U forward Class',
+                        url: r.url,
+                        thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+                        description: r.content || 'Step-by-step programming solution tutorial.'
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('[LANGGRAPH-AGENT] [Scraper] Tavily search error:', e.message);
+    }
+
+    // Ensure we have at least one valid Striver resource by pushing the fallback if empty
+    if (resources.length === 0) {
+        const fallback = getFallbackVideo(queryTopic);
+        resources.push({
+            title: fallback.title,
+            url: fallback.url,
+            thumbnail: `https://img.youtube.com/vi/${fallback.videoId}/mqdefault.jpg`,
+            description: `Official comprehensive video tutorial from take U forward channel to master ${queryTopic} algorithms.`
+        });
+    }
+
+    return { resources };
+}
+
+/**
+ * Node 4: Synthesizer
+ * Uses Groq LLM or custom fallback to draft the final narrative advice text.
+ */
+async function synthesizerNode(state) {
+    const { status, weakTopics, meta, recommendedQuestions } = state;
+    console.log('[LANGGRAPH-AGENT] [Synthesizer] Drafting coaching narrative...');
+
+    let topFailedQTitle = meta && meta.topFailedQ ? meta.topFailedQ.title : '';
+    let topFailedQCount = meta && meta.topFailedQ ? meta.topFailedQ.count : 0;
+    let topTopicName = meta && meta.topTopic ? meta.topTopic : '';
+
+    // Default narrative text (if LLM fails)
+    let motivation = '';
+    if (status === 'new_user') {
+        motivation = "Welcome to Code Arena! It looks like you haven't attempted any challenges yet. Let's start with basic Data Structures and Algorithms. Below are starter video classes and a custom practice sequence to build your confidence.";
+    } else if (status === 'master_user') {
+        motivation = "Incredible! You have solved every single challenge in Code Arena! You have mastered the platform. To keep learning, explore advanced topics like dynamic programming optimizations, segment trees, and hard competitive programming lectures below.";
+    } else if (status === 'advanced_user') {
+        motivation = "Great job! You have accepted solutions for all questions you attempted so far. Let's keep the momentum going by exploring new topics and challenges you haven't solved yet. Keep up the high standard!";
+    } else {
+        motivation = `Based on your analysis, you have encountered difficulties with **${topTopicName}** algorithms (specifically on "${topFailedQTitle}", where you made ${topFailedQCount} failed attempts). We highly recommend you review the classes below, then return to practice the suggested list in sequence.`;
+    }
 
     const groq = getGroq();
     if (groq) {
         try {
-            const systemPrompt = `You are an encouraging AI Coach on a competitive coding platform. Your goal is to review a student's weak topic and failed question count, and write a motivational, personalized, 3-4 sentence study advice narrative. Suggest they review the courses and then come back to solve their practice sequence.`;
+            const systemPrompt = `You are a professional, encouraging AI Coach on a competitive coding platform called Code Arena. Your goal is to review a student's weak topic and failed question count, and write a motivational, personalized 3-4 sentence study advice narrative. Suggest they review the take U forward courses listed and then attempt the practice list in sequence. Use bold markdown for key terms.`;
             
-            const prompt = `Student has failed ${topFailedQ.count} times on "${topFailedQ.title}" under topic "${topTopic}". Their weakest topics overall are: ${weakestTopics.slice(0, 3).join(', ')}. Keep it encouraging, short, and to the point. Do not list recommended questions or links; just provide the text advice.`;
+            let userPrompt = '';
+            if (status === 'new_user') {
+                userPrompt = `The student is brand new and has not solved any questions yet. Encourage them to begin practicing easy questions like Two Sum or Plus One and view introductory lectures.`;
+            } else if (status === 'master_user') {
+                userPrompt = `The student has solved all questions on the platform! Congratulate them on this major milestone, suggest they try competitive programming, and give them a master's level pep talk.`;
+            } else if (status === 'advanced_user') {
+                userPrompt = `The student has solved all questions they attempted with 100% success, but has not finished all platform questions. Encourage them to push out of their comfort zone.`;
+            } else {
+                userPrompt = `The student has failed ${topFailedQCount} times on the question "${topFailedQTitle}" under topic "${topTopicName}". Their weakest topics overall are: ${weakTopics.join(', ')}. Provide supportive, specific, actionable coaching.`;
+            }
 
             const completion = await groq.chat.completions.create({
                 messages: [
                     { role: "system", content: systemPrompt },
-                    { role: "user", content: prompt }
+                    { role: "user", content: userPrompt }
                 ],
                 model: "llama-3.3-70b-versatile",
-                max_tokens: 200
+                max_tokens: 250
             });
 
-            if (completion.choices[0].message.content) {
+            if (completion.choices[0] && completion.choices[0].message && completion.choices[0].message.content) {
                 motivation = completion.choices[0].message.content.trim();
             }
         } catch (llmErr) {
-            console.warn('[STUDY-PLAN] Groq summary generation failed:', llmErr.message);
+            console.warn('[LANGGRAPH-AGENT] [Synthesizer] Groq narrative synthesis failed, using template fallback:', llmErr.message);
         }
     }
 
-    return {
-        status: 'needs_practice',
-        motivation,
-        weakTopics: weakestTopics.slice(0, 3),
-        resources,
-        recommendedQuestions: recommendedQuestions.map(q => ({
-            _id: q._id,
-            title: q.title,
-            slug: q.slug,
-            difficulty: q.difficulty,
-            topic: q.topic,
-            points: q.points
-        }))
-    };
+    return { motivation };
+}
+
+// Build and compile the LangGraph StateGraph
+const graph = new StateGraph({
+    channels: {
+        userId: null,
+        submissions: null,
+        allQuestions: null,
+        solvedQuestionIds: null,
+        status: null,
+        motivation: null,
+        weakTopics: null,
+        resources: null,
+        recommendedQuestions: null,
+        meta: null
+    }
+})
+    .addNode('analyzer', analyzerNode)
+    .addNode('retriever', retrieverNode)
+    .addNode('scraper', scraperNode)
+    .addNode('synthesizer', synthesizerNode)
+    .addEdge(START, 'analyzer')
+    .addEdge('analyzer', 'retriever')
+    .addEdge('retriever', 'scraper')
+    .addEdge('scraper', 'synthesizer')
+    .addEdge('synthesizer', END);
+
+const agentExecutor = graph.compile();
+
+/**
+ * Primary endpoint service handler. Executes the LangGraph agent state machine.
+ */
+async function generateStudyPlan(userId) {
+    try {
+        console.log(`[STUDY-PLAN-SERVICE] Running LangGraph agent for user: ${userId}`);
+        const result = await agentExecutor.invoke({ userId });
+        
+        return {
+            status: result.status,
+            motivation: result.motivation,
+            weakTopics: result.weakTopics || [],
+            resources: result.resources || [],
+            recommendedQuestions: result.recommendedQuestions || []
+        };
+    } catch (err) {
+        console.error('[STUDY-PLAN-SERVICE] Execution failed:', err);
+        throw err;
+    }
 }
 
 module.exports = { generateStudyPlan };

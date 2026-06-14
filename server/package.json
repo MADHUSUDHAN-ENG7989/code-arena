@@ -17,6 +17,10 @@
   "type": "commonjs",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@langchain/core": "^1.1.49",
+    "@langchain/langgraph": "^1.4.2",
+    "@langchain/openai": "^1.4.7",
+    "@pinecone-database/pinecone": "^7.2.0",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
